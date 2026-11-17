@@ -36,7 +36,7 @@ def make_bag(path):
     db = sqlite3.connect(path)
     for t in ('verblijfsobject', 'ligplaats', 'standplaats'):
         db.execute(f'CREATE TABLE {t}({ADDRESS_COLS})')
-    db.execute('CREATE TABLE pand(feature_id INTEGER PRIMARY KEY, geom BLOB, status TEXT)')
+    db.execute('CREATE TABLE pand(feature_id INTEGER PRIMARY KEY, geom BLOB, identificatie TEXT, status TEXT)')
     rows = [(point(121400, 487900), 'Verblijfsobject in gebruik', 'Damrak', 1, None, None, '1012LG', 'Amsterdam'),
             (point(121401, 487901), 'Verblijfsobject in gebruik', 'Damrak', 1, 'A', None, '1012LG', 'Amsterdam'),
             (point(121402, 487902), 'Verblijfsobject in gebruik (niet ingemeten)', 'Damrak', 3, None, 'II', '1012LG', 'Amsterdam'),
@@ -46,9 +46,9 @@ def make_bag(path):
     db.execute('INSERT INTO ligplaats(geom,status,openbare_ruimte_naam,huisnummer,postcode,woonplaats_naam) VALUES (?,?,?,?,?,?)',
                (polygon([(121500, 488000), (121510, 488000), (121510, 488004), (121500, 488000)]), 'Plaats aangewezen', 'Prins Hendrikkade', 40,
                 '1012TL', 'Amsterdam'))
-    db.executemany('INSERT INTO pand(geom,status) VALUES (?,?)', [
-        (polygon([(121390, 487890), (121410, 487890), (121410, 487910), (121390, 487910), (121390, 487890)]), 'Pand in gebruik'),
-        (polygon([(121600, 487890), (121610, 487890), (121610, 487900), (121600, 487890)]), 'Bouwvergunning verleend')])   # not built
+    db.executemany('INSERT INTO pand(geom,identificatie,status) VALUES (?,?,?)', [
+        (polygon([(121390, 487890), (121410, 487890), (121410, 487910), (121390, 487910), (121390, 487890)]), '0363100012345678', 'Pand in gebruik'),
+        (polygon([(121600, 487890), (121610, 487890), (121610, 487900), (121600, 487890)]), '0363100012345679', 'Bouwvergunning verleend')])   # not built
     db.commit()
     db.close()
 
@@ -105,6 +105,41 @@ class Bag(unittest.TestCase):
         rec = array('i', zlib.decompress(db.execute('SELECT data FROM bldg').fetchone()[0]))
         self.assertEqual((rec[0], rec[1]), (4, 0))     # four points (the closing one dropped), no height
         db.close()
+
+    def test_heights_from_3dbag(self):
+        gpkg = self.tmp / 'bag.gpkg'
+        make_bag(gpkg)
+        heights = self.tmp / 'heights.sqlite'
+        db = sqlite3.connect(heights)
+        db.executescript('CREATE TABLE height(pand INTEGER PRIMARY KEY, dm INT) WITHOUT ROWID; CREATE TABLE meta(key TEXT PRIMARY KEY, value TEXT);'
+                         "INSERT INTO height VALUES (363100012345678, 215), (363100012345679, 99);")
+        db.commit(); db.close()
+        out = self.tmp / 'out'
+        build_bag.build(gpkg, out, heights=heights)
+        db = sqlite3.connect(out / 'buildings.sqlite')
+        meta = dict(db.execute('SELECT key, value FROM meta'))
+        self.assertEqual((meta['buildings'], meta['with_height']), ('1', '1'))
+        self.assertIn('3DBAG by tudelft3d and 3DGI', meta['source'])
+        rec = array('i', zlib.decompress(db.execute('SELECT data FROM bldg').fetchone()[0]))
+        self.assertEqual((rec[0], rec[1]), (4, 215))   # the building under construction has no record, so its height is not used
+        db.close()
+
+    def test_buildings_only(self):
+        gpkg = self.tmp / 'bag.gpkg'
+        make_bag(gpkg)
+        out = self.tmp / 'out'
+        self.assertEqual(build_bag.build(gpkg, out, addresses=False), (0, 1))
+        self.assertTrue((out / 'buildings.sqlite').exists())
+        self.assertFalse((out / 'addresses').exists())
+
+    def test_no_heights_file_keeps_zero(self):
+        gpkg = self.tmp / 'bag.gpkg'
+        make_bag(gpkg)
+        out = self.tmp / 'out'
+        build_bag.build(gpkg, out)
+        meta = dict(sqlite3.connect(out / 'buildings.sqlite').execute('SELECT key, value FROM meta'))
+        self.assertEqual(meta['with_height'], '0')
+        self.assertNotIn('3DBAG', meta['source'])
 
 
 if __name__ == '__main__':

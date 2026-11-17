@@ -8,3 +8,4 @@ osmium==4.3.2
 Pillow==13.0.0
 pyshp==3.1.6
 imagecodecs==2026.3.6   # decodes the floating-point predictor in AHN GeoTIFFs; the last release for Python 3.11
+pyogrio==0.13.0         # reads 3D BAG's GeoPackage straight out of its zip (tools/fetch_3dbag.py); wheels bring their own GDAL

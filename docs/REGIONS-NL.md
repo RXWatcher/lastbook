@@ -68,6 +68,7 @@ Twelve provinces would add nothing a person needs.
 | Sea and coast (`national.sqlite`, layers `ocean`, `island`) | OSM coastline, closed westward | OSM water and land polygons, split, EPSG:4326 (osmdata.openstreetmap.de) | OpenStreetMap contributors | ODbL 1.0 | opened |
 | Help points (`poi`) | OSM | OSM, with Dutch classes (see Help points) | OpenStreetMap contributors | ODbL 1.0 | opened |
 | Buildings (`buildings.sqlite`) | Microsoft footprints | BAG `pand`, from PDOK `bag-light.gpkg` (7.8 GB) | Kadaster | CC0 1.0 | opened |
+| Building heights (`buildings.sqlite`, the `height_dm` of each building) | OpenStreetMap heights (US only) | 3D BAG data dump v2025.09.03 (`3dbag_nl.gpkg.zip`, 19.6 GB, read with `tools/fetch_3dbag.py`): `lod13_2d.b3_h_70p` minus `pand.b3_h_maaiveld`, joined on the BAG pand number | 3DBAG by tudelft3d and 3DGI | CC BY 4.0 | opened |
 | Addresses (`addresses/NL.sqlite`) | Overture | BAG `verblijfsobject`, `ligplaats`, `standplaats` from the same file | Kadaster | CC0 1.0 | opened |
 | Elevation (`terrain.sqlite`) | USGS 3DEP 1 arc-second | AHN4 terrain model (`dtm_05m`) from PDOK's WCS, asked for at 1 arc-second in EPSG:4326 | Rijkswaterstaat / Het Waterschapshuis | CC0 1.0 (stated in the service's capabilities) | opened |
 | Crops (`crops.sqlite`) | USDA Cropland Data Layer | BRP Gewaspercelen 2025, definitive (2.9 GB GeoPackage) | RVO | CC0 1.0 | opened |
@@ -131,17 +132,21 @@ Coverage, from Overpass counts on 17 November 2026 (search only) and the build:
 
 - **CC0 1.0** (Kadaster BAG, AHN, RVO BRP): no conditions; credited as a courtesy.
 - **ODbL 1.0** (OpenStreetMap): credit, and the map database stays open, as for the US map.
+- **CC BY 4.0** (3D BAG building heights): the credit "© 3DBAG by tudelft3d and 3DGI" is required, and 3D BAG asks that it
+  appear in the corner of a browsable map, as the credit line does. The licence page asks for a link to the
+  licence (http://creativecommons.org/licenses/by/4.0/) and a note of changes: the build keeps one number per building (the
+  height above ground, in decimetres) and nothing else. Used with the owner's approval of 17 November 2026. The credit is part of the
+  credit line below, and 3D BAG's copyright page is the link.
 
-The credit line on the Netherlands map is `© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · Natural Earth`
+The credit line on the Netherlands map is `© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · 3DBAG by tudelft3d and 3DGI · Natural Earth`
 (`engine/regions.json`). Natural Earth is the world base map every map set draws.
 
 Not used, for licence reasons:
 
 - PDOK's current administrative boundaries (CC BY 4.0).
 - Het Waterschapshuis's flood defences (`waterschappen-keringen-imwa`, CC BY-SA 4.0).
-- 3D BAG building heights (CC BY 4.0).
 
-The build keeps to ODbL and CC0 so the credit line stays short and the map set carries no share-alike terms beyond
+The build keeps to ODbL and CC0, with the one CC BY 4.0 exception above, so the map set carries no share-alike terms beyond
 OpenStreetMap's own.
 
 ## How addresses are written
@@ -205,6 +210,8 @@ Built on 17 November 2026 on an Apple Silicon Mac (10 cores, 32 GB) from the sou
 | `build_map_osm.py` | 5,563,556 map features; 77,924 points; 16 sea and 171 land polygons; 346 municipalities and 12 provinces | 12 min |
 | `build_water.py --geo` | 4,750 named lakes and reservoirs | under 1 min |
 | `build_bag.py` | 9,706,576 addresses; 11,297,049 buildings | 5.5 min |
+| `fetch_3dbag.py download`, then `heights` | 3D BAG dump of 19.6 GB downloaded; `heights.sqlite` (160 MB): 10,771,547 buildings with a 3D model, 10,770,983 with a height | about 10 min (download), 1.5 min |
+| `build_bag.py --buildings-only --heights` | buildings with a height above ground: 10,695,808 of 11,297,049 (94.7%); 601,241 without (drawn one storey tall) | 8.5 min |
 | `build_places_nl.py` | 67,160 names; 2,505 BAG towns and villages, all with a province, all but 2 with a municipality | 3 s |
 | `fetch_ahn.py` | 15 of 20 one-degree cells have AHN data; 221 MB | 2 min |
 | `build_terrain.py` | 1,689 tiles, zoom 4 to 12 | 5 s |
@@ -228,6 +235,20 @@ Help points in the map, by class:
 | Out-of-hours GP posts | 38 |
 
 The Overpass count of hospitals with `emergency=yes` was 79; the map has 75 `hospital_seh` points. The difference was not looked into.
+
+**Building heights.** The 3D view takes a building's height from the `height_dm` of its record, as for the US:
+
+- 3D BAG reconstructs a building from the AHN laser points over it. The height is the tallest part's 70th-percentile roof
+  height (`b3_h_70p`, LoD1.3) minus the ground level (`b3_h_maaiveld`), both metres above NAP, rounded to decimetres.
+  A 70th percentile reads a little under the ridge of a pitched roof and true on a flat one. The tallest building in the tile
+  around Utrecht's Dom comes out at 98.5 m, around Groningen's Grote Markt at 88 m.
+- BAG buildings are matched on the pand number. 3D BAG's dump is of 3 September 2025 and the BAG here of 1 November 2026, so
+  newer buildings, and the 397,512 BAG objects 3D BAG leaves out for lack of laser points, have no height. Under 1 m is
+  treated as none, and 300 m is the cap (5 buildings reach it). Without a height the 3D view draws one storey.
+- No smaller product carries a per-building height: the tile files and the data dump are the same data, and the dump (19.6 GB)
+  is read with GDAL in place, never unpacked (111 GB).
+- Checked against `/api/map/bldg3d` on a copy of the test library: the tile around Amsterdam's Dam has 6,547 of 6,686
+  buildings with a height (tallest 79 m); around Rotterdam's centre 3,533 of 3,707 (tallest 150 m).
 
 **End to end.** First-run setup was run with the Small library and the Netherlands, all three zips found on the computer.
 It checked each against the manifest's size and SHA-256, installed them and switched the library in, with nothing
@@ -262,7 +283,6 @@ Setup's map choice lists the Netherlands under "Countries", above the 52 US stat
   Each needs a new kind of map layer.
 - **Dutch guides and documents.** The English Denk vooruit booklet and emergency kit list (Rijksoverheid, text CC0, images
   excluded; opened) belong in a library add-on pack, with guides pointing at their pages.
-- **Building heights** for the 3D view (3D BAG, CC BY 4.0).
 - **Hosting.** Lastbook's site does not host the Netherlands zips; their manifest entries are marked `local_only`. This
   fork publishes the zips of this build as a GitHub release ([nl-map-2026-11-17](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17)),
   for people who want to install them without building.
@@ -274,6 +294,8 @@ Setup's map choice lists the Netherlands under "Countries", above the 52 US stat
   - every dataset in the sources table;
   - the BAG, BRP and AHN licence statements in PDOK's feeds and service capabilities;
   - the PDOK Bestuurlijke Gebieden licence (CC BY 4.0);
+  - the 3D BAG copyright page (https://docs.3dbag.nl/en/copyright/), delivery pages, attribute pages and release notes, and the
+    data dump itself (CC BY 4.0);
   - the Denk vooruit copyright page.
 - **Search only:**
   - Overpass counts of help points;
