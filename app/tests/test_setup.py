@@ -1180,6 +1180,90 @@ class AddressIndexes(Maps):
         self.assertEqual(merged['address_indexes'][0]['files'], validated['address_indexes'][0]['files'])
 
 
+class RegionMaps(Maps):
+    """A country map (the Netherlands) offered only as a file on this computer: listed in the manifest with local_only."""
+
+    def nl_manifest(self):
+        zpath = self.tmp / 'Lastbook-Map-NL.zip'
+        files = make_map(zpath, state='NL')
+        data = zpath.read_bytes()
+        raw = json.loads(json.dumps(self.manifest().current))
+        raw['maps'] = [{'id': 'NL', 'title': 'Netherlands', 'kind': 'country', 'includes': 'x', 'local_only': True,
+                        'installed_bytes': sum(map(len, files.values())), 'available': True,
+                        'files': [{'name': 'Lastbook-Map-NL.zip', 'url': f'{self.base}/Lastbook-Map-NL.zip', 'size': len(data),
+                                   'sha256': sha(data), 'kind': 'zip'}]}]
+        validated = manifest.validate(raw, ALLOWED)
+        self.assertIsNotNone(validated)
+        return manifest.Manifest(bundled=validated, remote=None, allowed=ALLOWED, context=self.ctx), zpath
+
+    def manage_library(self):
+        cur = self.parent / 'LastbookData'
+        (cur / 'library-data').mkdir(parents=True)
+        (cur / 'library-data/catalog.json').write_text('{}')
+        (cur / 'pack.json').write_text('{"name": "small", "map": "base"}')
+        return cur
+
+    def test_manifest_keeps_local_only(self):
+        mf, _ = self.nl_manifest()
+        self.assertIs(mf.current['maps'][0]['local_only'], True)
+        self.assertEqual(mf.current['maps'][0]['kind'], 'country')
+
+    def test_region_address_ids(self):
+        mf, _ = AddressIndexes.address_manifest(self)
+        for good in ('NL', 'DE-BY'):
+            raw = json.loads(json.dumps(mf.current))
+            raw['address_indexes'][0]['id'] = good
+            self.assertIsNotNone(manifest.validate(raw, ALLOWED), good)
+        for bad in ('de-by', '../NL', 'NLD'):
+            raw = json.loads(json.dumps(mf.current))
+            raw['address_indexes'][0]['id'] = bad
+            self.assertIsNone(manifest.validate(raw, ALLOWED), bad)
+
+    def test_local_only_map_without_file(self):
+        mf, zpath = self.nl_manifest()
+        zpath.unlink()
+        cur = self.manage_library()
+        s = self.setup('manage', current=cur, manifest=mf)
+        with mock.patch.object(download, 'Download', side_effect=AssertionError('a local-only map must never be downloaded')):
+            r = s.start(None, False, map_id='NL')
+        self.assertEqual(r['code'], 'local_only')
+        self.assertIn('Lastbook-Map-NL.zip', r['error'])
+        self.assertIn(str(self.parent), r['error'])
+
+    def test_local_only_map_from_file(self):
+        mf, zpath = self.nl_manifest()
+        self.parent.mkdir(parents=True, exist_ok=True)
+        placed = self.parent / zpath.name
+        shutil.copy(zpath, placed)
+        cur = self.manage_library()
+        s = self.setup('manage', current=cur, manifest=mf)
+        found = [f for f in s.found() if f['name'] == 'Lastbook-Map-NL.zip']
+        self.assertEqual([(f['kind'], f['id'], f['size_ok']) for f in found], [('map', 'NL', True)])
+        with mock.patch.object(download, 'Download', side_effect=AssertionError('a local-only map must never be downloaded')):
+            j = s.use(str(placed))
+            self.assertIsNone(j.get('error'), j)
+            self.assertEqual(self.wait(s)['state'], 'done')
+        lib, note = api.startup(self.settings)
+        self.assertIsNone(note.get('error'))
+        self.assertEqual(install.map_name(lib), 'NL')
+
+    def test_country_wording(self):
+        mf, _ = self.nl_manifest()
+        mf.current['maps'][0]['available'] = False
+        s = self.setup('manage', current=self.manage_library(), manifest=mf)
+        self.assertEqual(s.start(None, False, map_id='NL')['error'], 'That country’s map is not available yet.')
+
+    def test_nl_address_index_carried_over(self):
+        old, new = self.tmp / 'old', self.tmp / 'new'
+        (old / 'derived/geo/addresses').mkdir(parents=True)
+        for name in ('NL.sqlite', 'NL.json', 'DE-BY.sqlite'):
+            (old / 'derived/geo/addresses' / name).write_bytes(b'index ' + name.encode())
+        new.mkdir()
+        install.carry_over(old, new)
+        for name in ('NL.sqlite', 'NL.json', 'DE-BY.sqlite'):
+            self.assertEqual((new / 'derived/geo/addresses' / name).read_bytes(), b'index ' + name.encode())
+
+
 class ContentRevisions(Base):
     def revised_manifest(self, revision='2026-11-13-small-v2', actual_revision=None):
         metadata = {'name': 'small', 'map': 'base', 'content_revision': actual_revision or revision}

@@ -180,3 +180,11 @@ Built by setup-backend (2026-11-12):
 - `found[]` also lists a `Lastbook-Map-*.zip` already on this computer (`kind: "map"`); `use` on it starts the map job
   in manage mode, or is used by the next `start` in first-run setup.
 - Repair skips the map files when a `map-set.json` is present; those are checked against it instead.
+
+Regions outside the US (added 2026-11-17, `engine/regions.py`):
+- A map or address-index id is a region id: a US state code, a country's ISO 3166-1 code (`NL`) or an ISO 3166-2 subdivision
+  with a hyphen (`DE-BY`). A country's map entry has `kind: "country"`, and messages then say "country" for "state".
+- An entry with `"local_only": true` is a file Lastbook's site does not host: setup uses it only when it is found on this
+  computer (`found[]`, or `use`), checked against the manifest's size and SHA-256 as any other file, and never downloads it.
+  `start` with such a map and no file answers `{code: "local_only"}` with a sentence naming the file and the folder to put it
+  in; a local-only address index without its file is skipped unless it was asked for by name.

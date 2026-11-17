@@ -7,6 +7,8 @@ import sys
 import threading
 from pathlib import Path
 
+from engine import regions
+
 from . import download
 
 REMOTE = 'https://downloads.lastbook.org/manifest-v1.json'
@@ -69,7 +71,7 @@ def validate(m, allowed=None):
         for x in m.get(key) or []:
             if not isinstance(x, dict) or not isinstance(x.get('id'), str) or not NAME.match(x['id']):
                 return None
-            if key == 'address_indexes' and not re.fullmatch(r'[A-Z]{2}', x['id']):
+            if key == 'address_indexes' and not regions.REGION_ID.fullmatch(x['id']):
                 return None
             files = []
             for f in x.get('files') or []:
@@ -82,6 +84,8 @@ def validate(m, allowed=None):
                 return None
             entries.append({'id': x['id'], 'title': str(x.get('title') or x['id']), 'kind': str(x.get('kind') or 'state'),
                          'includes': str(x.get('includes') or ''),
+                         # offered only as a file already on this computer (a region Lastbook's site does not host): never downloaded
+                         'local_only': x.get('local_only') is True,
                          'installed_bytes': x.get('installed_bytes') if _int(x.get('installed_bytes')) else None,
                          'download_bytes': sum(f['size'] for f in files), 'available': available, 'files': files})
         collections[key] = entries

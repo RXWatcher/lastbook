@@ -449,7 +449,7 @@ class Setup:
                 return {'error': 'No local AI is offered for this version.', 'code': 'unavailable'}
             mp = self.manifest.map(map_id) if map_id else None
             if map_id and (not mp or not mp['available']):
-                return {'error': 'That state’s map is not available yet.', 'code': 'unavailable'}
+                return {'error': f'That {_place_word(mp)}’s map is not available yet.', 'code': 'unavailable'}
             requested_address = address_id
             address_id = address_id or map_id or (pack or {}).get('map') or cur.get('map')
             if address_id in ('base', 'us'):
@@ -457,7 +457,7 @@ class Setup:
             addresses = self.manifest.address_index(address_id) if address_id else None
             if not addresses or not addresses['available']:
                 if requested_address:
-                    return {'error': 'That state’s address search is not available yet.', 'code': 'unavailable'}
+                    return {'error': f'That {_place_word(addresses or mp)}’s address search is not available yet.', 'code': 'unavailable'}
                 addresses = None
             if folder and self.current and install._real(Path(folder).expanduser()) == install._real(self.current):
                 folder = None      # the window sends the shown folder, which in manage mode is the open library itself
@@ -495,6 +495,14 @@ class Setup:
             for f in self.found():
                 if f.get('size_ok') and f['name'] not in srcs and f['kind'] in ('pack', 'model', 'map', 'addresses'):
                     srcs[f['name']] = f['path']
+            # A local-only map or address index (a region whose files Lastbook's site does not host) is used from a file on this
+            # computer, never downloaded. A map asked for without its file stops here; a missing local-only index is skipped.
+            if _local_missing(mp, srcs):
+                return {'error': f'Put {_local_missing(mp, srcs)} in {self.default_parent}, then open setup again.', 'code': 'local_only'}
+            if _local_missing(addresses, srcs):
+                if requested_address:
+                    return {'error': f'Put {_local_missing(addresses, srcs)} in {self.default_parent}, then open setup again.', 'code': 'local_only'}
+                addresses = None
             names = ([f['name'] for f in pack['files']] if pack else []) + ([model['file']] if model else []) + ([f['name'] for f in mp['files']] if mp else []) + ([f['name'] for f in addresses['files']] if addresses else [])
             have = set(srcs)
             need = install.need_bytes(pack, model, have) + _map_need(mp, have) + _map_need(addresses, have)
@@ -900,6 +908,8 @@ class Setup:
                 raise download.Failed('found_mismatch', f'The {name} in {folder} doesn’t match the published file, so it was not used. '
                                                         'It was left as it is. Download it instead?', file=src)
             print(f'setup: {src} does not match; downloading instead', flush=True)
+        if any(e and e.get('local_only') and f in e['files'] for e in (plan.get('map'), plan.get('addresses'))):
+            raise download.Failed('local_only', f'{name} is no longer where it was. Put it in {self.default_parent}, then try again.')
         dest = work / 'downloads' / name
         if not dest.exists():       # room for what is still to come (the space check at start counted a file already here as had)
             try:
@@ -1082,6 +1092,18 @@ def path_too_deep(target, windows=None):
     """On Windows the library reads its files by ordinary paths, so <target>\\<longest file> must fit in WINDOWS_MAX_PATH."""
     windows = os.name == 'nt' if windows is None else windows
     return windows and len(str(target)) + 1 + LONGEST_INSIDE > WINDOWS_MAX_PATH
+
+
+def _place_word(entry):
+    """How the person's choice is named in a message: a US state, or a country."""
+    return 'country' if entry and entry.get('kind') == 'country' else 'state'
+
+
+def _local_missing(entry, sources):
+    """The first file of a local-only entry that is not on this computer, or None."""
+    if not entry or not entry.get('local_only'):
+        return None
+    return next((f['name'] for f in entry['files'] if f['name'] not in sources), None)
 
 
 def _tag_sources(job):
