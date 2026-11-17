@@ -33,7 +33,7 @@ if __name__ == '__main__':  # --data must be known before the paths below are wo
 
 import engine.paths as lastbook_paths  # noqa: E402  (data folder and program folder can differ in the packaged app)
 from engine.paths import ro_uri  # noqa: E402
-from engine import saved_pages, address_search, address_nl  # noqa: E402
+from engine import saved_pages, address_search, address_nl, regions  # noqa: E402
 from engine.setup import api as setup_api  # noqa: E402  (the one module that may download: only when the person asks)
 HERE = lastbook_paths.DATA  # holds derived/
 APP = lastbook_paths.APP  # holds web/ and content/
@@ -1039,7 +1039,8 @@ def ms_buildings(layers, z, x, y, tol, version):
 
 
 TILE_POI = {'hospital', 'clinic', 'doctors', 'pharmacy', 'chemist', 'fire_station', 'police', 'drinking_water', 'toilet',
-            'shelter', 'community_centre', 'supermarket', 'doityourself', 'hardware', 'spring'}
+            'shelter', 'community_centre', 'supermarket', 'doityourself', 'hardware', 'spring',
+            'hospital_seh', 'huisartsenpost', 'defibrillator', 'assembly_point'}
 
 
 HELP = {'hospital': 'Hospital', 'clinic': 'Clinic', 'doctors': 'Doctor', 'pharmacy': 'Pharmacy', 'chemist': 'Pharmacy',
@@ -1056,7 +1057,9 @@ HELP = {'hospital': 'Hospital', 'clinic': 'Clinic', 'doctors': 'Doctor', 'pharma
         'embassy': 'Embassy', 'mineral': 'Recorded mineral / mine', 'oil_gas_well': 'Recorded oil / gas well',
         'boat_launch': 'Boating facility', 'fish_stocking': 'Fish-stocking record',
         'dam': 'Dam (National Inventory of Dams)', 'reservoir': 'Reservoir', 'lake': 'Lake or pond', 'pond': 'Pond',
-        'orchard': 'Orchard', 'vineyard': 'Vineyard', 'berries': 'Berry field', 'perennial_veg': 'Asparagus field'}
+        'orchard': 'Orchard', 'vineyard': 'Vineyard', 'berries': 'Berry field', 'perennial_veg': 'Asparagus field',
+        'hospital_seh': 'Hospital with emergency department', 'huisartsenpost': 'Out-of-hours GP (huisartsenpost)',
+        'defibrillator': 'Defibrillator (AED)', 'assembly_point': 'Emergency assembly point'}
 
 
 CROP_KINDS = {'orchard', 'vineyard', 'berries', 'perennial_veg'}
@@ -1375,6 +1378,9 @@ def water_places(q, limit=10, near=None):
     finally:
         db.close()
     out = []
+    region = region_info()
+    metric = region['units'] == 'metric'
+    country = region['name'] if region['kind'] == 'country' else 'United States'
     for kind, name, lat, lon, raw in rows:
         d = json.loads(raw or '{}')
         text = (name + ' ' + (d.get('other_names') or '')).lower()
@@ -1385,9 +1391,12 @@ def water_places(q, limit=10, near=None):
         away = ''
         if near:
             km = haversine(near[0], near[1], lat, lon)[0]
-            away = f" · {km / 1.609:,.0f} mi away" if km >= 1.6 else ' · nearby'
+            if metric:
+                away = f" · {km:,.0f} km away" if km >= 1 else ' · nearby'
+            else:
+                away = f" · {km / 1.609:,.0f} mi away" if km >= 1.6 else ' · nearby'
         out.append((score, {'name': name, 'kind': {'dam': 'Dam', 'reservoir': 'Reservoir', 'lake': 'Lake'}[kind],
-                            'detail': (where or 'United States') + extra + away, 'lat': lat, 'lon': lon, 'source': 'water', 'onMap': True}))
+                            'detail': (where or country) + extra + away, 'lat': lat, 'lon': lon, 'source': 'water', 'onMap': True}))
     out.sort(key=lambda t: -t[0])
     return [o for _, o in out[:limit]]
 
@@ -1549,6 +1558,32 @@ def map_contents():
     return {'layers': sorted(kinds), 'bounds': bounds, 'detail': bool(boxes), 'contours': contours}
 
 
+US_REGION = {'id': None, 'name': None, 'kind': None, 'units': 'imperial', 'attribution': None,
+             'search_hint': 'Find an address, town or ZIP', 'place_hint': 'Try a town, county or 5-digit ZIP.', 'data_as_of': None}
+
+
+def region_info():
+    """The installed detailed map's region (engine/regions.json): its name, units, credits and search words for the Map screen. A
+    library with no regional map (or a US one) gets the US wording it always had."""
+    r = regions.installed_region(HERE)
+    if not r:
+        return dict(US_REGION)
+    info = {**US_REGION, **{k: r[k] for k in ('id', 'name', 'kind', 'units', 'attribution', 'search_hint', 'place_hint')}}
+    if r.get('box'):     # a region outside the US: the date its OpenStreetMap data was taken, for "Shows what was mapped by"
+        path = HERE / 'derived/geo/national.sqlite'
+        if path.exists():
+            try:
+                db = sqlite3.connect(ro_uri(path), uri=True)
+                try:
+                    row = db.execute("SELECT value FROM meta WHERE key='data_as_of'").fetchone()
+                finally:
+                    db.close()
+                info['data_as_of'] = (row[0] or '')[:10] or None if row else None
+            except sqlite3.Error:
+                pass
+    return info
+
+
 def map_info():
     db = mapdb()
     meta = dict(db.execute('SELECT key,value FROM meta').fetchall()) if db else {}
@@ -1628,7 +1663,10 @@ def map_info():
     if pack:
         extra.update(map_contents())
         geo = pack_datasets(extra)
-    return {**extra, 'meta': meta, 'datasets': geo, 'national': {k: v for k, v in national_status().items() if k not in ('source', 'database')}, 'version': data_version(), 'aerial_detail': detail, 'aerial_rev': rev, 'terrain_circle': tdetail}
+    region = regions.installed_region(HERE)
+    if region and region.get('datasets'):
+        geo = [dict(d) for d in region['datasets']]
+    return {**extra, 'region': region_info(), 'meta': meta, 'datasets': geo, 'national': {k: v for k, v in national_status().items() if k not in ('source', 'database')}, 'version': data_version(), 'aerial_detail': detail, 'aerial_rev': rev, 'terrain_circle': tdetail}
 
 
 def pack_datasets(have):
