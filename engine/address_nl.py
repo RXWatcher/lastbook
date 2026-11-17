@@ -147,7 +147,8 @@ def find(query, paths, limit=8, near=None):
             want = c['suffix']
             keyed = [(_suffix((r[2] or '') + (r[3] or '')), r) for r in rows]
             if want:
-                chosen = [r for s, r in keyed if s == want] or [r for s, r in keyed if s == SUFFIX_ALIASES.get(want)]
+                same = SUFFIX_ALIASES.get(want, want)     # floors: typed 2-III or 2-3 match a stored 3 or III
+                chosen = [r for s, r in keyed if s == want] or [r for s, r in keyed if SUFFIX_ALIASES.get(s, s) == same]
             else:
                 chosen = [r for s, r in sorted(keyed, key=lambda k: (k[0] != '', k[0]))]
             if not chosen:
