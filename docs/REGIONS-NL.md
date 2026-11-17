@@ -432,7 +432,7 @@ Setup's map choice lists the Netherlands under "Countries", above the 52 US stat
 - **Flood scenarios per breach.** LIWO's scenarios for one dike breach at a time (depth, speed, arrival time) have no open bulk
   download that was found; the ROR maps above are the open substitute.
 - **Hosting.** Lastbook's site does not host the Netherlands zips; their manifest entries are marked `local_only`. This
-  fork publishes the zips of this build as a GitHub release ([nl-map-2026-11-17](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17)),
+  fork publishes the zips of this build as a GitHub release ([nl-map-2026-11-17-v2](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17-v2); the first release, nl-map-2026-11-17, had no floods, heights, secondary addresses or Wikidata GP posts),
   for people who want to install them without building.
 - **Caribbean Netherlands**, as its own region.
 

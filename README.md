@@ -29,14 +29,15 @@ instead of a US state and you get:
 | Address search: postcode and house number (`1012 LG 1`), street first (`Damrak 1 Amsterdam`), a postcode alone (`3511 AA`), any house-number addition (`12A`, `12-2`, `2-III`, `2 hs`), and secondary addresses (a corner building's side-street address) | Kadaster BAG | CC0 1.0 | 9,723,320 addresses |
 | Elevation, relief, contours in metres, heights below sea level | AHN4 terrain model (Rijkswaterstaat, PDOK WCS), at 1 arc-second | CC0 1.0 | the whole country; the Zuidplaspolder reads −4.5 m |
 | Orchards, vineyards, soft fruit, asparagus and rhubarb | RVO BRP Gewaspercelen 2025 | CC0 1.0 | 6,013 map cells from 16,207 parcels |
-| Find a town, municipality or province (Den Haag and Den Bosch work as well as BAG's 's-Gravenhage and 's-Hertogenbosch) | BAG towns and villages; OpenStreetMap municipalities and provinces | CC0 1.0; ODbL 1.0 | 67,160 names |
+| Find a town, municipality or province (Den Haag and Den Bosch work as well as BAG's 's-Gravenhage and 's-Hertogenbosch) | BAG towns and villages; OpenStreetMap municipalities and provinces | CC0 1.0; ODbL 1.0 | 67,219 names |
 | Named lakes | OpenStreetMap | ODbL 1.0 | 4,750 |
 | Flood risk (Layers → Flood risk, from zoom 8): primary flood defences as lines; flood scenarios with water depth for floods of about 1 in 10, 100, 1,000 and 10,000 years. Scenarios, not a forecast | Rijkswaterstaat NBPW; the provinces' flood risk maps (EU Floods Directive, ROR) | Public domain; CC0 1.0 | 237 dike sections; 17,782 km² in the largest scenario |
 | Official preparedness documents in English, and four Dutch guides (72-hour kit and plan; warnings, radio and 112; flood, storm and leaving home; long power or water outage) | Government of the Netherlands, Denk vooruit (NCTV): booklet, kit list, plan form, nine web pages | CC0 1.0; text only, pictures not included | 4 documents, 45 pages; an add-on, see [The Dutch guides and documents](#the-dutch-guides-and-documents) |
 
 The map screen follows the region: kilometres and metres, the Dutch credit line
 (`© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · 3DBAG by tudelft3d and 3DGI · Natural Earth`), "Find an address, postcode or town", the date the
-map data was taken, and two new layers (Defibrillators, Emergency assembly points). Setup lists the Netherlands under
+map data was taken, two new help layers (Defibrillators, Emergency assembly points) and a Flood risk group in the Layers panel
+(dikes, and one flood scenario at a time with a water-depth key). Buildings stand at their real height in the 3D view. Setup lists the Netherlands under
 "Countries", above the US states. US maps, words and units are unchanged.
 
 Every source, licence and check, and what was left out and why, is in [docs/REGIONS-NL.md](docs/REGIONS-NL.md).
@@ -48,31 +49,38 @@ source. The map files can be downloaded ready-made from this fork's release (the
 
 #### The quick way: download the map files
 
-The release [nl-map-2026-11-17](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17) holds the files built on 17 November 2026
-(OpenStreetMap data as of 16 November 2026, BAG of 1 November 2026, BRP 2025). It has the two zips (0.9 GB and 0.4 GB), the
-manifest entries that let setup check them (`NL-entries.json`), and `SHA256SUMS`.
+The release [nl-map-2026-11-17-v2](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17-v2) holds the files built on 17 November 2026
+(OpenStreetMap data as of 16 November 2026, BAG of 1 November and 8 November 2026, 3D BAG of 3 September 2025, BRP 2025). It has
+the map zip (0.9 GB), the address zip (0.4 GB), the manifest entries that let setup check them (`NL-entries.json`), the Dutch
+documents add-on (`Lastbook-Addon-NL-Preparedness.zip`, 0.1 MB) and `SHA256SUMS`.
 
 ```bash
 git clone https://github.com/RXWatcher/lastbook.git && cd lastbook
 python3.11 -m venv .venv
 .venv/bin/pip install -r packaging/requirements_macos.txt     # Windows: packaging/requirements_app.txt; Linux: packaging/linux/requirements_linux.txt
 mkdir -p nl && cd nl
-curl -fLO https://github.com/RXWatcher/lastbook/releases/download/nl-map-2026-11-17/Lastbook-Map-NL.zip
-curl -fLO https://github.com/RXWatcher/lastbook/releases/download/nl-map-2026-11-17/Lastbook-Addresses-NL.zip
-curl -fLO https://github.com/RXWatcher/lastbook/releases/download/nl-map-2026-11-17/NL-entries.json
-curl -fLO https://github.com/RXWatcher/lastbook/releases/download/nl-map-2026-11-17/SHA256SUMS && shasum -a 256 -c SHA256SUMS
+for f in Lastbook-Map-NL.zip Lastbook-Addresses-NL.zip NL-entries.json Lastbook-Addon-NL-Preparedness.zip SHA256SUMS; do
+  curl -fLO https://github.com/RXWatcher/lastbook/releases/download/nl-map-2026-11-17-v2/$f
+done
+shasum -a 256 -c SHA256SUMS
 cd ..
 .venv/bin/python packaging/region_maps.py manifest NL --entries nl/NL-entries.json
 .venv/bin/python packaging/region_maps.py dev-manifest
 ```
 
-Then do steps 6 and 7 below: move the two zips to the folder setup looks in, and run Lastbook.
+Then do steps 6 and 7 below: move the two zips to the folder setup looks in, and run Lastbook. After setup has made your
+library, close Lastbook once and add the Dutch documents and guides (see [The Dutch guides and documents](#the-dutch-guides-and-documents)):
+
+```bash
+python3 packaging/pack_merge.py add --data "$HOME/Library/Application Support/Lastbook/LastbookData" nl/Lastbook-Addon-NL-Preparedness.zip
+```
 
 #### The full way: build the map files
 
 Build the map files once from the open data. Tested on an Apple Silicon Mac (macOS); the tools are plain Python and should run on
-Linux too. Plan on about 13 GB of downloads (16 GB once unpacked), about 25 GB of free disk for the sources and the build, and about
-25 minutes of build time on a recent Mac, plus the library you choose in setup.
+Linux too. Plan on about 37 GB of downloads (40 GB once unpacked; 3D BAG alone is 19.6 GB), about 50 GB of free disk for the sources
+and the build, and about 1.5 hours the first time on a recent Mac (the flood download is about 40 minutes and rate limited),
+plus the library you choose in setup.
 
 **1. Clone this fork and make the app's Python environment** (Python 3.11):
 
@@ -101,23 +109,35 @@ curl -fLO https://service.pdok.nl/kadaster/bag/atom/downloads/lvbag-extract-nl.z
 curl -fLO https://service.pdok.nl/rvo/gewaspercelen/atom/downloads/brpgewaspercelen_definitief_2025.gpkg   # BRP, 2.9 GB
 unzip -q water-polygons-split-4326.zip && unzip -q land-polygons-split-4326.zip
 cd ../../..
+derived/buildenv/bin/python tools/fetch_3dbag.py download derived/sources/nl/3dbag                 # 3D BAG building heights, 19.6 GB
 ```
 
-**4. Build the map files** into `derived/geo-nl/` (elevation is fetched from PDOK's AHN service by `fetch_ahn.py`, about 220 MB):
+Elevation (AHN, about 220 MB), the flood data and the Wikidata list of GP posts are fetched by their build tools in step 4.
+
+**4. Build the map files** into `derived/geo-nl/`:
 
 ```bash
 B=derived/buildenv/bin/python; S=derived/sources/nl; G=derived/geo-nl; BOX=3.2,50.7,7.3,53.7
 $B tools/build_map_osm.py $S/netherlands-latest.osm.pbf $G/national.sqlite --box $BOX \
-   --water-polygons $S/water-polygons-split-4326 --land-polygons $S/land-polygons-split-4326 --admin $G/admin.sqlite   # ~12 min
-$B tools/build_water.py --geo $G osm
-$B tools/build_bag.py $S/bag-light.gpkg $G --box $BOX                                                                    # ~6 min
-$B tools/build_bag_extra.py $S/lvbag-extract-nl.zip $G/addresses/NL.sqlite $G/addresses/NL-full.sqlite && mv $G/addresses/NL-full.sqlite $G/addresses/NL.sqlite   # ~6 min
+   --water-polygons $S/water-polygons-split-4326 --land-polygons $S/land-polygons-split-4326 --admin $G/admin.sqlite   # ~15 min
+mkdir -p $S/hap && $B tools/build_hap_nl.py $G/national.sqlite $G/national-hap.sqlite --csv $S/hap/hap.csv --download \
+   && mv $G/national-hap.sqlite $G/national.sqlite                              # out-of-hours GP posts from Wikidata
+$B tools/build_water.py --geo $G osm                                            # named lakes
+$B tools/build_floods_nl.py $G/water.sqlite --src $S/floods                     # dikes and flood scenarios, ~40 min the first time
+$B tools/fetch_3dbag.py heights $S/3dbag/3dbag_nl.gpkg.zip $S/3dbag/heights.sqlite                      # ~2 min
+$B tools/build_bag.py $S/bag-light.gpkg $G --box $BOX --heights $S/3dbag/heights.sqlite                  # buildings with heights, addresses; ~9 min
+$B tools/build_bag_extra.py $S/lvbag-extract-nl.zip $G/addresses/NL.sqlite $G/addresses/NL-full.sqlite \
+   && mv $G/addresses/NL-full.sqlite $G/addresses/NL.sqlite                     # secondary addresses; ~6 min
 $B tools/build_places_nl.py $G/national.sqlite $S/bag-light.gpkg $G/admin.sqlite $G/places.sqlite
 $B tools/fetch_ahn.py $S/ahn --box $BOX
 $B tools/build_terrain.py --src $S/ahn --out $G/terrain.sqlite --bbox $BOX --workers 6 \
    --source-label "AHN4 DTM (Rijkswaterstaat, CC0 1.0), 1 arc-second"
 $B tools/build_crops_nl.py $S/brpgewaspercelen_definitief_2025.gpkg $G/crops.sqlite --box $BOX
+python3 tools/build_nl_documents.py derived/nl-guides/addon --zip derived/packs/state-zips/Lastbook-Addon-NL-Preparedness.zip   # the Dutch documents add-on
 ```
+
+The order matters in three places: the GP posts go into the street map before the place finder reads it, the flood layers go
+into `water.sqlite` after the named lakes, and the secondary addresses are added to the index `build_bag.py` wrote.
 
 **5. Package them and tell setup about them:**
 
@@ -195,7 +215,11 @@ setup's repair does not call them damaged.
   112, floods and leaving home, long power and water cuts. Upstream's other guides (water, first aid, food, shelter) are US-based but
   mostly general. The documents are text-only (the government's pictures are not CC0), and the radio frequency table and phone numbers are
   as the government published them on 17 November 2026.
-- **No building heights** for the 3D view, and no Caribbean Netherlands.
+- **Building heights are from 3D BAG of September 2025**, so buildings built since have none and are drawn one storey tall, and a
+  pitched roof reads a little low (the height is the roof's 70th percentile).
+- **Flood scenarios are area-wide**, from the provinces' risk maps, simplified to about 50 m. They show roughly where and how deep, not
+  street by street, and not a single dike breach (LIWO's breach scenarios have no open bulk download).
+- **No Caribbean Netherlands** (Bonaire, Sint Eustatius, Saba).
 - **AEDs**: OpenStreetMap has about 4,400, far fewer than the national register, and most public AEDs are in locked cabinets
   whose code comes from 112.
 
@@ -207,7 +231,7 @@ setup's repair does not call them damaged.
 - `engine/address_nl.py`: Dutch address search, used by `server.places` when a Netherlands index is installed.
 - Setup accepts region ids (`NL`, `DE-BY`), and manifest entries marked `local_only` that are installed only from a file on the
   computer (`docs/SETUP-API.md`).
-- `tools/build_map_osm.py`, `build_bag.py`, `build_bag_extra.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`, `build_floods_nl.py`: the Netherlands
+- `tools/build_map_osm.py`, `build_hap_nl.py`, `build_bag.py`, `build_bag_extra.py`, `fetch_3dbag.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`, `build_floods_nl.py`: the Netherlands
   builders. `tools/map_schema.py` holds the street-map format they share with `tools/build_map.py`.
 - `tools/build_nl_documents.py`, `packaging/pack_merge.py`, `content/nl-documents/`, `content/topics/nl-*.json`: the Dutch documents add-on, the tool
   that puts an add-on into a library, the text it is built from, and the four guides. A guide with `needs_doc` shows only where that document is (`content/SCHEMA.md`).
@@ -224,7 +248,7 @@ setup's repair does not call them damaged.
 | macOS (Apple Silicon, macOS 14 or later) | 1.1.11 | Live on lastbook.org, signed and notarized |
 | Windows (64-bit, Windows 10 or later) | 1.1.11 | Live on lastbook.org, Authenticode signed |
 | Linux (Ubuntu 24.04 or 26.04 LTS, x86_64) | 1.1.11 | Ubuntu packages; installation instructions below |
-| Netherlands map (this fork) | source | Run from source with the map files from release [nl-map-2026-11-17](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17) or built yourself; see [Lastbook for the Netherlands](#lastbook-for-the-netherlands) |
+| Netherlands map (this fork) | source | Run from source with the map files from release [nl-map-2026-11-17-v2](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17-v2) or built yourself; see [Lastbook for the Netherlands](#lastbook-for-the-netherlands) |
 
 ## iPad (development preview, source only)
 
