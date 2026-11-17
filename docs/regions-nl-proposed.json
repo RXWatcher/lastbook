@@ -1,0 +1,191 @@
+{
+ "about": "Region definition for the detailed map of the Netherlands: the whole country as one region. Built on this branch (engine/regions.json, tools/, packaging/region_maps.py). See docs/REGIONS-NL.md.",
+ "status": "built",
+ "checked": "2026-11-17",
+ "codes": {
+  "proposal": "NL, ISO 3166-1 alpha-2, for the whole country.",
+  "why": "NL is not a US code in STATE_CODES (engine/address_search.py). The registry id pattern ^[A-Z]{2}(-[A-Z0-9]{1,3})?$ also allows ISO 3166-2 subdivisions such as DE-BY.",
+  "verified": "In use: engine/regions.json, the manifest and setup."
+ },
+ "layer_keys": {
+  "streets": "feat rows in national.sqlite",
+  "terrain": "terrain.sqlite",
+  "water": "water.sqlite",
+  "crops": "crops.sqlite",
+  "buildings": "buildings.sqlite",
+  "places": "places.sqlite",
+  "addresses": "derived/geo/addresses/NL.sqlite",
+  "pois": "poi rows in national.sqlite"
+ },
+ "licences": {
+  "ODbL-1.0": {
+   "name": "Open Database License 1.0",
+   "url": "https://opendatacommons.org/licenses/odbl/1-0/",
+   "attribution": "\"© OpenStreetMap contributors\"",
+   "share_alike": true,
+   "verified": "as for the US map"
+  },
+  "CC0-1.0": {
+   "name": "Creative Commons Zero 1.0",
+   "url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "attribution": "none required; credited as \"Kadaster BAG\", \"AHN\", \"RVO BRP\"",
+   "share_alike": false,
+   "verified": "stated in the PDOK feeds (BAG, BRP) and the AHN WCS capabilities"
+  },
+  "CC-BY-4.0": {
+   "name": "Creative Commons Attribution 4.0",
+   "url": "https://creativecommons.org/licenses/by/4.0/",
+   "attribution": "per source",
+   "share_alike": false,
+   "verified": "PDOK Bestuurlijke Gebieden API opened; not used",
+   "notes": "Kept out to keep the map to ODbL and CC0."
+  },
+  "CC-BY-SA-4.0": {
+   "name": "Creative Commons Attribution-ShareAlike 4.0",
+   "url": "https://creativecommons.org/licenses/by-sa/4.0/",
+   "attribution": "per source",
+   "share_alike": true,
+   "verified": "Het Waterschapshuis keringen feed opened; not used"
+  }
+ },
+ "country_layers": {
+  "streets": [
+   {
+    "dataset": "netherlands-latest.osm.pbf",
+    "publisher": "Geofabrik / OpenStreetMap contributors",
+    "url": "https://download.geofabrik.de/europe/netherlands-latest.osm.pbf",
+    "licence": "ODbL-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "Read by tools/build_map_osm.py; classes follow the Geofabrik free schema."
+   },
+   {
+    "dataset": "water-polygons-split-4326, land-polygons-split-4326",
+    "publisher": "OpenStreetMap contributors",
+    "url": "https://osmdata.openstreetmap.de/download/water-polygons-split-4326.zip",
+    "licence": "ODbL-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "Sea (layer ocean) and land (layer island)."
+   }
+  ],
+  "terrain": [
+   {
+    "dataset": "AHN4 dtm_05m via WCS, 1 arc-second, EPSG:4326",
+    "publisher": "Rijkswaterstaat / Het Waterschapshuis",
+    "url": "https://service.pdok.nl/rws/ahn/wcs/v1_0",
+    "licence": "CC0-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "tools/fetch_ahn.py; holes filled from the ground around them; 0.5 m sheets (about 455 GB) not needed at zoom 12."
+   }
+  ],
+  "water": [
+   {
+    "dataset": "named lakes from the OSM street map",
+    "publisher": "OpenStreetMap contributors",
+    "url": null,
+    "licence": "ODbL-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "tools/build_water.py --geo derived/geo-nl osm."
+   }
+  ],
+  "crops": [
+   {
+    "dataset": "BRP Gewaspercelen 2025, definitive",
+    "publisher": "RVO",
+    "url": "https://service.pdok.nl/rvo/gewaspercelen/atom/downloads/brpgewaspercelen_definitief_2025.gpkg",
+    "licence": "CC0-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "Chosen by gewascode (tools/build_crops_nl.py CROPS); drawn on a 30 m RD grid."
+   }
+  ],
+  "buildings": [
+   {
+    "dataset": "BAG pand, bag-light.gpkg",
+    "publisher": "Kadaster",
+    "url": "https://service.pdok.nl/kadaster/bag/atom/downloads/bag-light.gpkg",
+    "licence": "CC0-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "Standing buildings only; no heights."
+   }
+  ],
+  "places": [
+   {
+    "dataset": "BAG woonplaats",
+    "publisher": "Kadaster",
+    "url": "https://service.pdok.nl/kadaster/bag/atom/downloads/bag-light.gpkg",
+    "licence": "CC0-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "Towns and villages; aliases Den Haag, Den Bosch."
+   },
+   {
+    "dataset": "OSM municipalities (admin_level 8, ref:gemeentecode) and provinces (admin_level 4)",
+    "publisher": "OpenStreetMap contributors",
+    "url": null,
+    "licence": "ODbL-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "Kadaster boundaries are CC0 only up to 2021; the current service is CC BY 4.0."
+   }
+  ],
+  "addresses": [
+   {
+    "dataset": "BAG verblijfsobject, ligplaats, standplaats (main addresses)",
+    "publisher": "Kadaster",
+    "url": "https://service.pdok.nl/kadaster/bag/atom/downloads/bag-light.gpkg",
+    "licence": "CC0-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "Secondary addresses are not in this file."
+   }
+  ],
+  "pois": [
+   {
+    "dataset": "OSM, with hospital_seh, huisartsenpost, defibrillator and assembly_point classes",
+    "publisher": "OpenStreetMap contributors",
+    "url": null,
+    "licence": "ODbL-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "Out-of-hours GP posts are thin in OSM (48 of about 115)."
+   }
+  ]
+ },
+ "not_used": [
+  "PDOK Bestuurlijke Gebieden (current; CC BY 4.0)",
+  "Het Waterschapshuis waterschappen-keringen-imwa (CC BY-SA 4.0)",
+  "3D BAG (CC BY 4.0)",
+  "PDOK Locatieserver (online only)"
+ ],
+ "addressing": {
+  "postal_code": {
+   "format": "Four digits and two capital letters, written with a space (1012 LG); BAG stores it without.",
+   "example_pattern": "0000 AA"
+  },
+  "order": "Street, house number, then postcode and town (\"Damrak 1, 1012 LG Amsterdam\"); searched by postcode and number too (\"1012 LG 1\").",
+  "notes": "House letter (huisletter) and addition (huisnummertoevoeging) are matched on letters and digits only; Roman floors I-IV equal 1-4; \"hs\" equals H. engine/address_nl.py."
+ },
+ "regions": [
+  {
+   "code": "NL",
+   "name": "Nederland",
+   "name_en": "Netherlands",
+   "country": "Netherlands",
+   "country_iso": "NL",
+   "admin_level": "country",
+   "bbox": {
+    "west": 3.2,
+    "south": 50.7,
+    "east": 7.3,
+    "north": 53.7,
+    "notes": "European Netherlands, from the extreme points (Zeeuws-Vlaanderen 3.36 E, South Limburg 50.75 N, the German border 7.23 E, Rottumeroog 53.56 N) with a margin."
+   },
+   "layers": "country_layers"
+  }
+ ]
+}

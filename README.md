@@ -194,6 +194,12 @@ before running them. Their disposable test distro is named `LastbookTest`, with 
 - **State maps** are one US state's detailed map set, built by `packaging/build_packs.py map <ST>` and published by
   `packaging/state_maps.py`, with per-state address indexes from `packaging/address_indexes.py`. A state map replaces the
   library's map set; it never merges with it. Medium already holds California and All the whole US.
+- **Regions outside the US** (`engine/regions.json`) are countries or their subdivisions with a detailed map set of their
+  own, built whole from the country's open data by the tools in `tools/` and assembled by `packaging/region_maps.py`. The
+  first is **the Netherlands** (`NL`): streets and help points (OpenStreetMap), building outlines and Dutch address search by
+  postcode and house number (Kadaster BAG), elevation (AHN) and fruit crops (RVO BRP). Lastbook's site does not host it: its
+  manifest entries are `local_only`, and setup installs it from `Lastbook-Map-NL.zip` and `Lastbook-Addresses-NL.zip` placed
+  in the folder setup names. How to build it, and every source and licence: [docs/REGIONS-NL.md](docs/REGIONS-NL.md).
 - **The local AI** is optional: Gemma 4 26B A4B (Unsloth's `gemma-4-26B-A4B-it-UD-Q4_K_M.gguf`, about 17 GB). The file
   name, size, SHA-256 and Hugging Face revision are pinned in `llm_local.py`. Setup offers it only where the measured fit
   says it fits (about 18 GB of memory for model and context, plus a reserve) and says why in plain words when it does not.
@@ -220,7 +226,9 @@ before running them. Their disposable test distro is named `LastbookTest`, with 
 ## Tests
 
 ```bash
-python3 -B -m unittest app.tests.test_bridge app.tests.test_setup app.tests.test_data_folder app.tests.test_what_ships app.tests.test_update app.tests.test_address_search app.tests.test_topic_search app.tests.test_chat_steps app.tests.test_validate_topics app.tests.test_libq
+python3 -B -m unittest app.tests.test_bridge app.tests.test_setup app.tests.test_data_folder app.tests.test_what_ships app.tests.test_update app.tests.test_address_search app.tests.test_topic_search app.tests.test_chat_steps app.tests.test_validate_topics app.tests.test_libq app.tests.test_regions app.tests.test_address_nl app.tests.test_region_server
+python3 -I -B packaging/test_region_maps.py                                          # the region map-set packager
+derived/buildenv/bin/python -B -m unittest discover -s tools/tests -t .              # the Netherlands build tools (build venv)
 ```
 
 `test_bridge` needs a data folder (`LASTBOOK_DATA`); the others run without a library. `packaging/test_pack_tools.py SAMPLE

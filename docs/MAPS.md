@@ -109,6 +109,10 @@ issue before any code.
 [REGIONS-LK.md](REGIONS-LK.md) does the same for Sri Lanka as one island-wide region.
 [REGIONS-TH.md](REGIONS-TH.md) does the same for Thailand's provinces and Bangkok.
 [REGIONS-DE.md](REGIONS-DE.md) does the same for Germany's 16 states.
+[REGIONS-NL.md](REGIONS-NL.md) does the same for the Netherlands as one region, and goes further: the Netherlands is built.
+`engine/regions.json` holds the region, the tools in `tools/` (`build_map_osm.py`, `build_bag.py`, `build_places_nl.py`,
+`fetch_ahn.py`, `build_crops_nl.py`) build its files, and `packaging/region_maps.py` assembles them into a map set that setup
+installs from a file on the computer.
 
 ## Checking a map change
 
