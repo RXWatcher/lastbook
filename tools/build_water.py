@@ -2,6 +2,7 @@
 
   python tools/build_water.py nid            # dams from derived/geo/sources/nid/nation.csv
   python tools/build_water.py nhd [STATE..]  # waterbodies from derived/geo/sources/nhd/*.zip (all downloaded states by default)
+  python tools/build_water.py --geo derived/geo-nl osm   # another map folder: named lakes from its street map only
 
 The `resource` + `spatial` tables mirror the resource atlas so the map's pin code reads both; `feat` + `feat_idx`
 mirror the street-map tiles so waterbody outlines draw as water.
@@ -295,6 +296,12 @@ def build_index():
 
 
 if __name__ == '__main__':
+    if sys.argv[1:2] == ['--geo']:      # build into another map folder (default derived/geo), e.g. a region's derived/geo-nl
+        if len(sys.argv) < 3:
+            sys.exit(__doc__)
+        GEO = Path(sys.argv[2]).resolve()
+        DB = GEO / 'water.sqlite'
+        del sys.argv[1:3]
     if sys.argv[1:2] == ['nid']:
         build_nid()
     elif sys.argv[1:2] == ['nhd']:
