@@ -14,12 +14,16 @@ there is no data. Buildings and water are holes in a terrain model; holes up to 
 ground around them, so a polder does not show false sea-level pits. Larger water stays empty and draws at sea level (0 m).
 A cell already written is kept, so an interrupted run resumes.
 """
-import argparse, io, math, sys, time, urllib.request
+import argparse, io, math, sys, time, urllib.error, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import logging
+
 import numpy as np
 import tifffile
+
+logging.getLogger('tifffile').setLevel(logging.ERROR)   # AHN's no-data value does not fit tifffile's tag check; the data is read fine
 
 WCS = 'https://service.pdok.nl/rws/ahn/wcs/v1_0'
 CRS = 'http://www.opengis.net/def/crs/EPSG/0/4326'
@@ -78,8 +82,13 @@ def fetch_piece(lon0, lat0, size, n):
     for attempt in range(5):
         try:
             req = urllib.request.Request(url, headers={'User-Agent': 'lastbook-map-builder'})
-            with urllib.request.urlopen(req, timeout=300) as r:
-                data = r.read()
+            try:
+                with urllib.request.urlopen(req, timeout=300) as r:
+                    data = r.read()
+            except urllib.error.HTTPError as e:
+                if e.code == 400 and b'ExtentError' in e.read():     # wholly outside AHN (the sea, Belgium, Germany): no data
+                    return np.full((n, n), np.nan, np.float32)
+                raise
             with tifffile.TiffFile(io.BytesIO(data)) as t:
                 a = t.pages[0].asarray().astype(np.float32)
             if a.shape != (n, n):
