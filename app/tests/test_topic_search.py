@@ -17,7 +17,8 @@ WORDS = ROOT / 'web' / 'words.js'
 
 # The stop words app.js passes in, read from app.js so the test follows it.
 QSTOP = re.search(r"const QSTOP = new Set\('([^']*)'\.split", (ROOT / 'web' / 'app.js').read_text(encoding='utf-8')).group(1).split(' ')
-TOPICS = [json.loads(p.read_text(encoding='utf-8')) for p in sorted((ROOT / 'content' / 'topics').glob('*.json'))]
+# The guides a library without the Netherlands documents shows: a guide with needs_doc (the Dutch ones) is left out by the server (server.topics_resolved).
+TOPICS = [t for t in (json.loads(p.read_text(encoding='utf-8')) for p in sorted((ROOT / 'content' / 'topics').glob('*.json'))) if not t.get('needs_doc')]
 
 # Everyday English questions. Each must give the same topics and choices as the old a-z matching,
 # including words joined by punctuation, which the old split took apart.
