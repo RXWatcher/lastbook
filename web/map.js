@@ -87,7 +87,8 @@ const MapView = (() => {
     perennial_veg: 'USDA 2025 satellite crop map: usually right for big orchards, sometimes wrong for small ones. Trees and vines keep producing for decades but need water in dry regions and winter pruning. Private farmland — ask first.',
     flood: 'A scenario, not a forecast: it shows the greatest water depth if the area floods, with the defences failing or overtopped, for a flood of that likelihood. It is not today’s water level and it can be wrong at street scale. In a real emergency follow NL-Alert and the advice of your safety region (veiligheidsregio) and the 112 services.',
     dike: 'Primary flood defences from the national base file (NBPW): a line along each dike section, dune or dam. Being near one does not mean it is safe or unsafe. Stay off dikes in a storm or when water is high.',
-    pond: 'Small ponds are often livestock ponds with manure runoff: treat the water and cook any fish thoroughly. Small ponds can be fished out in weeks.', spring: 'Mapped spring — treat the water before drinking.', drinking_water: 'Mapped tap; may be off in an emergency.' };
+    pond: 'Small ponds are often livestock ponds with manure runoff: treat the water and cook any fish thoroughly. Small ponds can be fished out in weeks.', spring: 'Mapped spring — treat the water before drinking.', drinking_water: 'Mapped tap; may be off in an emergency.',
+    huisartsenpost: 'Out-of-hours GP post. Some posts listed here have since closed or moved: phone your own GP’s number first (out of hours it puts you through to the post on duty), or 112 if a life is at risk.' };
   const CROP_CAVEAT_NL = 'RVO 2025 crop parcels as declared by farmers: right for the parcel, not for every tree. Private farmland — ask first.';
   const caveat = cls => metric() && ['orchard', 'vineyard', 'berries', 'perennial_veg'].includes(cls) ? CROP_CAVEAT_NL : CAVEAT[cls];
   let st = null, world = null, geography = null;
