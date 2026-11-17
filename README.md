@@ -23,7 +23,7 @@ instead of a US state and you get:
 | What | From | Licence | In the build of 17 Nov 2026 |
 |---|---|---|---|
 | Streets, land use, water, rail, place names, coast | OpenStreetMap (Geofabrik `netherlands-latest.osm.pbf`, osmdata coastline polygons) | ODbL 1.0 | 5,563,556 map features |
-| Help points: hospitals (marked when they have an emergency department, SEH), out-of-hours GP posts (huisartsenposten), defibrillators (AED), emergency assembly points, pharmacies, fire, police, drinking water, shelters, supermarkets, fuel | OpenStreetMap; huisartsenposten also from Wikidata (CC0 1.0) | ODbL 1.0 | 77,983 points, including 4,363 AEDs, 75 SEH hospitals and 119 huisartsenposten |
+| Help points: hospitals (marked when they have an emergency department, SEH), out-of-hours GP posts (huisartsenposten), defibrillators (AED), emergency assembly points, pharmacies, fire, police, drinking water, shelters, supermarkets, fuel | OpenStreetMap; huisartsenposten also from Wikidata (CC0 1.0) | ODbL 1.0 | 77,983 points, including 4,363 AEDs, 83 hospitals with an emergency department and 119 huisartsenposten |
 | Building outlines | Kadaster BAG (`bag-light.gpkg`, PDOK) | CC0 1.0 | 11,297,049 buildings |
 | Building heights for the 3D view | 3D BAG (3DBAG by tudelft3d and 3DGI), joined to BAG on the building number | CC BY 4.0 | 10,695,808 of those buildings; the rest are drawn one storey tall |
 | Address search: postcode and house number (`1012 LG 1`), street first (`Damrak 1 Amsterdam`), a postcode alone (`3511 AA`), any house-number addition (`12A`, `12-2`, `2-III`, `2 hs`), and secondary addresses (a corner building's side-street address) | Kadaster BAG | CC0 1.0 | 9,723,320 addresses |
@@ -214,8 +214,9 @@ files are also written into the library's `pack-manifest.tsv`, so setup's repair
 
 - **Out-of-hours GP posts may be out of date.** The map has 119 points: 61 from OpenStreetMap and 58 from Wikidata, whose list
   dates from 2018 and 2019. RIVM counts about 101 today, so a few points may be closed or moved, or doubled. RIVM's own list
-  has no licence that allows reuse. Call 112 or your own GP's number. Emergency departments are as tagged in OpenStreetMap
-  (75, RIVM counts 79), and a few hospitals with one are not marked.
+  has no licence that allows reuse. Call 112 or your own GP's number.
+- **Emergency departments** are those OpenStreetMap tags (75), plus 8 hospitals with an emergency-ward entrance mapped at them.
+  RIVM counts 79; three of the tagged ones are not an emergency department (two forensic clinics, the Sint Maartenskliniek).
 - **The Dutch guides cover only the government's own English material**: the 72-hour kit and plan, warnings and
   112, floods and leaving home, long power and water cuts. Upstream's other guides (water, first aid, food, shelter) are US-based but
   mostly general. The documents are text-only (the government's pictures are not CC0), and the radio frequency table and phone numbers are

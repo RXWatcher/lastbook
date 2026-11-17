@@ -81,19 +81,19 @@ def is_emergency_entrance(tags):
 
 def mark_emergency_departments(db, entrances, radius_m=300):
     """A hospital not tagged emergency=yes but with an emergency-ward entrance (emergency=emergency_ward_entrance) mapped within
-    radius_m has an emergency department (SEH): OpenStreetMap often maps the entrance and not the hospital's tag. Returns how many
-    were marked."""
-    if not entrances:
-        return 0
-    dlat = radius_m / 111_320
-    marked = 0
-    for pid, lon, lat in db.execute("SELECT id, lon, lat FROM poi WHERE cls='hospital'").fetchall():
-        dlon = dlat / max(0.2, math.cos(math.radians(lat)))
-        if any(abs(elon - lon) <= dlon and abs(elat - lat) <= dlat and
-               ((elon - lon) / dlon) ** 2 + ((elat - lat) / dlat) ** 2 <= 1 for elon, elat in entrances):
-            db.execute("UPDATE poi SET cls='hospital_seh' WHERE id=?", (pid,))
-            marked += 1
-    return marked
+    radius_m has an emergency department (SEH): OpenStreetMap often maps the entrance and not the hospital's tag. Each entrance counts
+    for the one hospital nearest to it, so on a campus (a children's hospital or cancer centre beside the main hospital) only the
+    hospital it serves is marked. Returns how many were marked."""
+    hospitals = db.execute("SELECT id, cls, lon, lat FROM poi WHERE cls IN ('hospital', 'hospital_seh')").fetchall()
+    marked = set()
+    for elon, elat in entrances:
+        k = math.cos(math.radians(elat))
+        best = min(((((lon - elon) * k) ** 2 + (lat - elat) ** 2) ** 0.5 * 111_320, pid, cls) for pid, cls, lon, lat in hospitals) if hospitals else None
+        if best and best[0] <= radius_m and best[2] == 'hospital':
+            marked.add(best[1])
+    for pid in marked:
+        db.execute("UPDATE poi SET cls='hospital_seh' WHERE id=?", (pid,))
+    return len(marked)
 
 
 def poi_class(tags):

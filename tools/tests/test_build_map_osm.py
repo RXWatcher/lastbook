@@ -79,6 +79,17 @@ class EmergencyDepartments(unittest.TestCase):
         self.assertEqual(dict(db.execute('SELECT name, cls FROM poi')), {
             'ZGT Hengelo': 'hospital_seh', 'Far away hospital': 'hospital', 'Already tagged': 'hospital_seh', 'A clinic beside an entrance': 'clinic'})
 
+    def test_an_entrance_counts_for_the_nearest_hospital_only(self):
+        """On a campus (UMC Utrecht and its children's hospital and cancer centre), the entrance belongs to the hospital it is nearest to."""
+        db = sqlite3.connect(':memory:')
+        map_schema.create_map_tables(db)
+        w = map_schema.MapWriter(db)
+        w.poi('hospital_seh', 'UMC Utrecht', 5.1790, 52.0860)
+        w.poi('hospital', 'Prinses Maxima Centrum', 5.1825, 52.0870)
+        n = build_map_osm.mark_emergency_departments(db, [(5.1795, 52.0862)])      # beside UMC Utrecht, about 220 m from the other
+        self.assertEqual(n, 0)
+        self.assertEqual(dict(db.execute('SELECT name, cls FROM poi'))['Prinses Maxima Centrum'], 'hospital')
+
     def test_entrance_nodes_are_collected(self):
         self.assertTrue(build_map_osm.is_emergency_entrance({'emergency': 'emergency_ward_entrance'}))
         self.assertFalse(build_map_osm.is_emergency_entrance({'emergency': 'defibrillator'}))

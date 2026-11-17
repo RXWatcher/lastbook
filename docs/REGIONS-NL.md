@@ -155,10 +155,13 @@ Coverage, from Overpass counts on 17 November 2026 (search only) and the build:
 
 - **Hospitals with an emergency department.** RIVM's 2026 reachability analysis counts 79 SEH locations (opened). The
   Geofabrik file holds 75 hospitals tagged `emergency=yes`, which is what the map shows (an earlier Overpass count of 79 was
-  not reproduced). Not all 75 are an SEH (two forensic clinics and the Sint Maartenskliniek carry the tag), and at least
-  six real ones are not tagged: ZGT Hengelo, IJsselland Ziekenhuis, Franciscus Gasthuis, Sint Jansdal, Treant Refaja
-  Ziekenhuis and Gelre Zutphen have only an `emergency=emergency_ward_entrance` node nearby. No open list of SEH locations
-  was found (see below), so none was added; the net effect is that the map's count is about right but not the same set.
+  not reproduced). Not all 75 are an SEH (two forensic clinics and the Sint Maartenskliniek carry the tag). Hospitals that are
+  not tagged but have an emergency-ward entrance (`emergency=emergency_ward_entrance`) mapped within 300 m are marked too, each
+  entrance counting only for the hospital nearest to it (`mark_emergency_departments` in `tools/build_map_osm.py`). That adds 8:
+  ZGT Hengelo, IJsselland Ziekenhuis, Franciscus Gasthuis, Sint Jansdal, Treant Refaja Ziekenhuis and Gelre Zutphen; the
+  Wilhelmina Kinderziekenhuis, which runs UMC Utrecht's children's emergency department; and the Calamiteitenhospitaal, the
+  national disaster hospital at UMC Utrecht's emergency department. The map has **83**. No open list of SEH locations was
+  found (see below).
 - **Out-of-hours GP posts.** RIVM counts 101 posts in 2025 (VZinfo; InEen's 2025 benchmark says 99); the ZorgkaartNederland and
   Zorgbeurs directories list 111 to 115 (search only, not open data, not used). See "Out-of-hours GP posts" below for the
   sources checked and what the map now holds.
@@ -384,7 +387,7 @@ Help points in the map, by class:
 | Other hospitals | 92 |
 | Out-of-hours GP posts | 38 |
 
-The Overpass count of hospitals with `emergency=yes` was 79; the map has 75 `hospital_seh` points (see Help points).
+The Overpass count of hospitals with `emergency=yes` was 79; the map has 83 `hospital_seh` points: 75 tagged and 8 with a mapped emergency-ward entrance (see Help points).
 
 Rebuilt for out-of-hours GP posts on 17 November 2026 (`build_map_osm.py` 15 min, then `build_hap_nl.py` under 1 min): the new
 name rules give 61 posts from OpenStreetMap, up from 38, and 77,925 points in all; `build_hap_nl.py` adds 58 from Wikidata
