@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 server = None     # imported in setUp: importing it here would fix its data folder before test_bridge's fixture sets one
 
-NL_CREDITS = '© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · Natural Earth'
+NL_CREDITS = '© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · 3DBAG by tudelft3d and 3DGI · Natural Earth'
 
 
 class RegionServer(unittest.TestCase):

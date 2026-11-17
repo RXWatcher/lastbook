@@ -25,6 +25,7 @@ instead of a US state and you get:
 | Streets, land use, water, rail, place names, coast | OpenStreetMap (Geofabrik `netherlands-latest.osm.pbf`, osmdata coastline polygons) | ODbL 1.0 | 5,563,556 map features |
 | Help points: hospitals (marked when they have an emergency department, SEH), out-of-hours GP posts (huisartsenposten), defibrillators (AED), emergency assembly points, pharmacies, fire, police, drinking water, shelters, supermarkets, fuel | OpenStreetMap; huisartsenposten also from Wikidata (CC0 1.0) | ODbL 1.0 | 77,983 points, including 4,363 AEDs, 75 SEH hospitals and 119 huisartsenposten |
 | Building outlines | Kadaster BAG (`bag-light.gpkg`, PDOK) | CC0 1.0 | 11,297,049 buildings |
+| Building heights for the 3D view | 3D BAG (3DBAG by tudelft3d and 3DGI), joined to BAG on the building number | CC BY 4.0 | 10,695,808 of those buildings; the rest are drawn one storey tall |
 | Address search: postcode and house number (`1012 LG 1`), street first (`Damrak 1 Amsterdam`), a postcode alone (`3511 AA`), any house-number addition (`12A`, `12-2`, `2-III`, `2 hs`), and secondary addresses (a corner building's side-street address) | Kadaster BAG | CC0 1.0 | 9,723,320 addresses |
 | Elevation, relief, contours in metres, heights below sea level | AHN4 terrain model (Rijkswaterstaat, PDOK WCS), at 1 arc-second | CC0 1.0 | the whole country; the Zuidplaspolder reads −4.5 m |
 | Orchards, vineyards, soft fruit, asparagus and rhubarb | RVO BRP Gewaspercelen 2025 | CC0 1.0 | 6,013 map cells from 16,207 parcels |
@@ -32,7 +33,7 @@ instead of a US state and you get:
 | Named lakes | OpenStreetMap | ODbL 1.0 | 4,750 |
 
 The map screen follows the region: kilometres and metres, the Dutch credit line
-(`© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · Natural Earth`), "Find an address, postcode or town", the date the
+(`© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · 3DBAG by tudelft3d and 3DGI · Natural Earth`), "Find an address, postcode or town", the date the
 map data was taken, and two new layers (Defibrillators, Emergency assembly points). Setup lists the Netherlands under
 "Countries", above the US states. US maps, words and units are unchanged.
 
