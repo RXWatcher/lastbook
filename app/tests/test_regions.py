@@ -30,7 +30,7 @@ class Regions(unittest.TestCase):
         self.assertEqual(nl['address_style'], 'nl')
         self.assertEqual(nl['box'], [3.2, 50.7, 7.3, 53.7])
         self.assertEqual(nl['attribution'], '© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · Natural Earth')
-        self.assertEqual(len(nl['datasets']), 6)
+        self.assertEqual(len(nl['datasets']), 7)
         self.assertEqual(nl['name_in_text'], 'the Netherlands')       # "a detailed map of the Netherlands"
         self.assertEqual(regions.get('CA').get('name_in_text', 'California'), 'California')
 

@@ -52,6 +52,16 @@ const MapView = (() => {
   ].map(([id, label, sym, col, cls, group]) => ({ id, label, sym, col, cls: cls.split(','), group }));
   const GROUPS = [['help', 'Emergency help'], ['water', 'Water'], ['supply', 'Supplies & camping'], ['food', 'Food that keeps growing (2025 crop maps)'], ['resource', 'Natural resources (historical records)']];
   const BY_CLS = {}; for (const l of LAYERS) for (const c of l.cls) BY_CLS[c] = l;
+  // Area layers are shapes, not pins: ticked in the Layers panel, drawn from /api/map/flood (server.py flood_tile). kind is what the map set
+  // holds (/api/map/info layers); token is what the server is asked for. Layers with the same `exclusive` replace each other.
+  const AREAS = [
+    ['dike', 'Primary flood defences (dikes, dunes, dams)', 'dike', 'dike', '#8e1b1b', '▬', null],
+    ['f10', 'Flood scenario: large probability (1 in 10 a year)', 'flood_t10', 't10', '#4f94d4', '≋', 'flood'],
+    ['f100', 'Flood scenario: medium probability (1 in 100 a year)', 'flood_t100', 't100', '#4f94d4', '≋', 'flood'],
+    ['f1000', 'Flood scenario: small probability (1 in 1,000 a year)', 'flood_t1000', 't1000', '#4f94d4', '≋', 'flood'],
+    ['f10000', 'Flood scenario: very small probability (1 in 10,000 a year)', 'flood_t10000', 't10000', '#4f94d4', '≋', 'flood'],
+  ].map(([id, label, kind, token, col, sym, exclusive]) => ({ id, label, kind, token, col, sym, exclusive }));
+  const FLOOD_DEPTH = [['#c2e5f6', 'under 0.5 m'], ['#8cc4e8', '0.5–1 m'], ['#4f94d4', '1–2 m'], ['#2f55a8', '2–5 m'], ['#2a1f7a', 'over 5 m']];   // classes of tools/build_floods_nl.py
   const DEFAULT_LAYERS = ['hospital', 'clinic', 'aed', 'pharmacy', 'fire', 'police', 'shelter', 'water', 'reservoir', 'fish', 'boat'];
   const PRESETS = [['Emergency', ['hospital', 'clinic', 'aed', 'assembly', 'dentist', 'pharmacy', 'fire', 'police', 'shelter', 'community']], ['Water', ['water', 'spring', 'reservoir', 'pond', 'dam', 'fish', 'boat']],
     ['Supplies', ['food', 'hardware', 'fuel', 'camp']], ['Food trees', ['orchard', 'vineyard', 'berries']], ['Resources', ['fish', 'boat', 'mineral', 'well']], ['All', LAYERS.map(l => l.id)]];
@@ -75,6 +85,8 @@ const MapView = (() => {
     vineyard: 'USDA 2025 satellite crop map: usually right for big orchards, sometimes wrong for small ones. Trees and vines keep producing for decades but need water in dry regions and winter pruning. Private farmland — ask first.',
     berries: 'USDA 2025 satellite crop map: usually right for big orchards, sometimes wrong for small ones. Trees and vines keep producing for decades but need water in dry regions and winter pruning. Private farmland — ask first.',
     perennial_veg: 'USDA 2025 satellite crop map: usually right for big orchards, sometimes wrong for small ones. Trees and vines keep producing for decades but need water in dry regions and winter pruning. Private farmland — ask first.',
+    flood: 'A scenario, not a forecast: it shows the greatest water depth if the area floods, with the defences failing or overtopped, for a flood of that likelihood. It is not today’s water level and it can be wrong at street scale. In a real emergency follow NL-Alert and the advice of your safety region (veiligheidsregio) and the 112 services.',
+    dike: 'Primary flood defences from the national base file (NBPW): a line along each dike section, dune or dam. Being near one does not mean it is safe or unsafe. Stay off dikes in a storm or when water is high.',
     pond: 'Small ponds are often livestock ponds with manure runoff: treat the water and cook any fish thoroughly. Small ponds can be fished out in weeks.', spring: 'Mapped spring — treat the water before drinking.', drinking_water: 'Mapped tap; may be off in an emergency.' };
   const CROP_CAVEAT_NL = 'RVO 2025 crop parcels as declared by farmers: right for the parcel, not for every tree. Private farmland — ask first.';
   const caveat = cls => metric() && ['orchard', 'vineyard', 'berries', 'perennial_veg'].includes(cls) ? CROP_CAVEAT_NL : CAVEAT[cls];
@@ -151,7 +163,8 @@ const MapView = (() => {
     const openWhole = !place && !(isFinite(lat) && isFinite(lon));   // nothing says where to open: the whole of this map, once its bounds have come
     st = { lat: isFinite(lat) ? lat : place ? place.lat : 39, lon: isFinite(lon) ? lon : place ? place.lon : -98, z: isFinite(z) ? Math.max(MINZ, Math.min(MAXZ, z)) : place ? place.z : 4,
       on: new Set(on), tiles: new Map(), pending: new Set(), gen: 0, mark: null, sel: null, raf: 0, alive: true, pins: [], pinBox: null, hits: [], serial: { pins: 0, near: 0, members: 0, place: 0 }, hover: null,
-      dem: new Map(), demPending: new Set(), demNone: new Map(), style: load('mapStyle', { relief: true, contours: true }) };
+      dem: new Map(), demPending: new Set(), demNone: new Map(), style: load('mapStyle', { relief: true, contours: true }),
+      areas: new Set((load('mapAreas', []) || []).filter(id => AREAS.some(a => a.id === id))), floods: new Map(), floodPending: new Set() };
     if (q.get('pin') && isFinite(lat) && isFinite(lon)) st.mark = { lat, lon, name: q.get('pin').slice(0, 80), kind: 'Linked place' };
     const cv = $('mapc');
     st.cv = cv; st.ctx = cv.getContext('2d');
@@ -215,11 +228,14 @@ const MapView = (() => {
     if (!info.layers) return;
     st.have = new Set(info.layers); st.bounds = info.bounds;
     st.on = new Set([...st.on].filter(id => offered(LAYERS.find(l => l.id === id))));
+    st.areas = new Set([...st.areas].filter(id => areaOffered(AREAS.find(a => a.id === id))));
+    if ($('layers')) { $('layers').innerHTML = ''; renderLayers() }   // a panel built before this arrived is built again, with the flood layers
     layerCount();
     if (!st.have.size) $('near').closest('section').hidden = true;
     if (info.bounds) { const b = $('map-us'); b.textContent = 'All'; if (!abroad()) { b.title = 'Whole map'; b.setAttribute('aria-label', 'Whole map') } }
   }
   const offered = l => !st.have || (l && l.cls.some(c => st.have.has(c)));
+  const areaOffered = a => !!(st.have && a && st.have.has(a.kind));
   function toastMap(m) { if (typeof toast === 'function') toast(m) }
   function stop() {
     document.getElementById('main')?.classList.remove('map-page');
@@ -254,12 +270,13 @@ const MapView = (() => {
 
   // ---------------------------------------------------------------- layers ----
   function kinds() { return LAYERS.filter(l => st.on.has(l.id)).flatMap(l => l.cls) }
-  function layerCount() { const n = st.on.size; $('layer-count').textContent = st.have && !st.have.size ? '' : n ? `· ${n}` : '· none' }
+  function layerCount() { const n = st.on.size + st.areas.size; $('layer-count').textContent = st.have && !st.have.size ? '' : n ? `· ${n}` : '· none' }
   function renderLayers() {
     const box = $('layers'); if (!box || box.hidden) return;
     const counts = {}; for (const p of st.pins) if (inView(p)) for (const [k, n] of Object.entries(p.kinds)) { const l = layerOf(k); counts[l.id] = (counts[l.id] || 0) + n }
     if (box.querySelector('fieldset')) {  // already built: refresh ticks and counts in place so focus isn't lost
       box.querySelectorAll('label.ly').forEach(lb => { const i = lb.querySelector('input'); i.checked = st.on.has(i.value); lb.querySelector('small').textContent = i.checked ? (counts[i.value] || 0).toLocaleString() : '' });
+      box.querySelectorAll('label.ar input').forEach(i => { i.checked = st.areas.has(i.value) });
       return;
     }
     box.innerHTML = `<div class="layers-head"><b>Show on map</b><button class="x" aria-label="Close layers">×</button></div>
@@ -270,9 +287,18 @@ const MapView = (() => {
         ${st.noContours ? '' : `<label><input type="checkbox" data-style="contours"${st.style.contours ? ' checked' : ''}><i class="msym style-ico">〰</i><span>Contour lines (from zoom 11)</span></label>`}
         ${st.have && !st.have.has('orchard') ? '' : `<label><input type="checkbox" data-style="crops"${st.style.crops !== false ? ' checked' : ''}><i class="msym style-ico" style="background:#3f7a2a">♣</i><span>Orchard &amp; vineyard areas (coloured)</span></label>`}</fieldset>
       ${GROUPS.filter(([g]) => LAYERS.some(l => l.group === g && offered(l))).map(([g, gl]) => `<fieldset><legend>${gl}</legend>${LAYERS.filter(l => l.group === g && offered(l)).map(l => `<label class="ly"><input type="checkbox" value="${l.id}"${st.on.has(l.id) ? ' checked' : ''}>${sym(l, 20)}<span>${escH(l.label)}</span><small>${st.on.has(l.id) ? (counts[l.id] || 0).toLocaleString() : ''}</small></label>`).join('')}</fieldset>`).join('')}
+      ${AREAS.some(areaOffered) ? `<fieldset class="areas"><legend>Flood risk</legend>${AREAS.filter(areaOffered).map(a => `<label class="ar"><input type="checkbox" value="${a.id}"${st.areas.has(a.id) ? ' checked' : ''}><i class="msym style-ico" style="background:${a.col}">${a.sym}</i><span>${escH(a.label)}</span></label>`).join('')}
+        <div class="floodkey" aria-label="Water depth colours">${FLOOD_DEPTH.map(([c, n]) => `<span><i style="background:${c}"></i>${n}</span>`).join('')}</div>
+        <p class="small muted" style="margin:4px 4px 0">${escH(caveat('flood'))} Drawn from zoom 8.</p></fieldset>` : ''}
       ${st.have && !st.have.size ? '' : '<p class="small muted" style="margin:6px 2px 0">Numbers are places in the current view.</p>'}`;
     box.querySelector('.x').onclick = () => { box.hidden = true; $('layers-btn').setAttribute('aria-expanded', 'false') };
     box.querySelectorAll('label.ly input').forEach(i => i.onchange = () => { i.checked ? st.on.add(i.value) : st.on.delete(i.value); layersChanged() });
+    box.querySelectorAll('label.ar input').forEach(i => i.onchange = () => {
+      const a = AREAS.find(x => x.id === i.value);
+      if (i.checked && a.exclusive) for (const o of AREAS) if (o !== a && o.exclusive === a.exclusive) st.areas.delete(o.id);
+      i.checked ? st.areas.add(a.id) : st.areas.delete(a.id);
+      save('mapAreas', [...st.areas]); layerCount(); renderLayers(); draw();
+    });
     box.querySelectorAll('[data-style]').forEach(i => i.onchange = () => { if (i.dataset.style === 'aerial') return setPhoto(i.checked); st.style[i.dataset.style] = i.checked; save('mapStyle', st.style); draw() });
     box.querySelectorAll('[data-p]').forEach(b => b.onclick = () => { st.on = new Set((PRESETS.find(p => p[0] === b.dataset.p)?.[1] || []).filter(id => offered(LAYERS.find(l => l.id === id)))); layersChanged(); renderLayers() });
     renderLayers();
@@ -388,6 +414,41 @@ const MapView = (() => {
     }
     return t;
   }
+  // Flood outlines and dike lines: their own tiles, so ticking them never refetches the base map (/api/map/flood, server.py flood_tile)
+  function getFlood(z, x, y, want) {
+    const k = tileKey(z, x, y) + '|' + want; let t = st.floods.get(k);
+    if (t?.failed && Date.now() - t.at > 5000) { st.floods.delete(k); t = undefined }
+    if (!t && !st.floodPending.has(k) && st.floodPending.size < 6) {
+      st.floodPending.add(k); const state = st;
+      fetch(`/api/map/flood/${tileKey(z, x, y)}?s=${want}${st.ver ? '&v=' + st.ver : ''}`).then(r => { if (!r.ok) throw Error(r.status); return r.json() })
+        .then(d => { if (st !== state) return; st.floodPending.delete(k); st.floods.set(k, renderFlood(d, z)); if (st.floods.size > 160) st.floods.delete(st.floods.keys().next().value); draw() })
+        .catch(() => { if (st === state) { st.floodPending.delete(k); st.floods.set(k, { failed: true, at: Date.now() }); draw() } });
+    }
+    return t;
+  }
+  function renderFlood(d, z) {
+    const R = Math.min(2, devicePixelRatio || 1), S = 256 * R, k = S / EXT, L = d.layers || {};
+    const c = document.createElement('canvas'); c.width = c.height = S;
+    const g = c.getContext('2d');
+    if (L.flood) {   // depth classes drawn opaque, shallow first, then laid on as one translucent sheet so tile blocks never double up or show seams
+      const sheet = document.createElement('canvas'); sheet.width = sheet.height = S; const sg = sheet.getContext('2d');
+      FLOOD_DEPTH.forEach(([col], i) => {
+        sg.beginPath();
+        for (const [cls, , parts] of L.flood) if (+cls.split('-')[1] === i + 1) for (const p of parts) { sg.moveTo(p[0] * k, p[1] * k); for (let j = 2; j < p.length; j += 2) sg.lineTo(p[j] * k, p[j + 1] * k); sg.closePath() }
+        sg.fillStyle = sg.strokeStyle = col; sg.lineWidth = 0.8 * R; sg.fill('evenodd'); sg.stroke();
+      });
+      g.globalAlpha = 0.6; g.drawImage(sheet, 0, 0); g.globalAlpha = 1;
+    }
+    if (L.dike) {
+      g.lineCap = 'round'; g.lineJoin = 'round';
+      const w = (z < 10 ? 1.6 : z < 13 ? 2.4 : 3.4) * R;
+      for (const [col, extra] of [['#ffffff', 2.2 * R], ['#8e1b1b', 0]]) {
+        g.strokeStyle = col; g.lineWidth = w + extra;
+        for (const [, , parts] of L.dike) for (const p of parts) { g.beginPath(); g.moveTo(p[0] * k, p[1] * k); for (let j = 2; j < p.length; j += 2) g.lineTo(p[j] * k, p[j + 1] * k); g.stroke() }
+      }
+    }
+    return { canvas: c };
+  }
   function prune() { if (st.tiles.size > 260) { const ks = [...st.tiles.keys()]; for (const k of ks.slice(0, ks.length - 200)) st.tiles.delete(k) } }
 
   // Each tile is drawn once into an offscreen canvas; labels are collected for screen-space placement.
@@ -457,6 +518,7 @@ const MapView = (() => {
     order.sort((a, b) => Math.hypot(a[0] + .5 - cx, a[1] + .5 - cy) - Math.hypot(b[0] + .5 - cx, b[1] + .5 - cy));  // centre tiles load first
     const labels = [];
     let loading = 0;
+    const fw = st.areas.size ? AREAS.filter(a => st.areas.has(a.id)).map(a => a.token).join(',') : '';
     for (const [tx, ty] of order) {
       const n = 2 ** tz, wx = ((tx % n) + n) % n, sx = w / 2 + (tx - cx) * ts, sy = h / 2 + (ty - cy) * ts;
       const t = getTile(tz, wx, ty);
@@ -470,6 +532,7 @@ const MapView = (() => {
           if (pt && pt.canvas && pt.photo === !!st.style.aerial) { const S = pt.canvas.width / f; g.drawImage(pt.canvas, (wx - ppx * f) * S, (ty - ppy * f) * S, S, S, sx, sy, ts + 0.5, ts + 0.5); break }
         }
       }
+      if (fw && tz >= 7) { const ft = getFlood(tz, wx, ty, fw); if (ft?.canvas) g.drawImage(ft.canvas, sx, sy, ts + 0.5, ts + 0.5); else if (!ft?.failed) loading++ }
     }
     st.loading = loading;
     if (st.style.crops !== false) cropLayer(g, V);

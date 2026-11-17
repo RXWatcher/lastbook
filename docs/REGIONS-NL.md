@@ -71,6 +71,8 @@ Twelve provinces would add nothing a person needs.
 | Addresses (`addresses/NL.sqlite`) | Overture | BAG `verblijfsobject`, `ligplaats`, `standplaats` from the same file | Kadaster | CC0 1.0 | opened |
 | Elevation (`terrain.sqlite`) | USGS 3DEP 1 arc-second | AHN4 terrain model (`dtm_05m`) from PDOK's WCS, asked for at 1 arc-second in EPSG:4326 | Rijkswaterstaat / Het Waterschapshuis | CC0 1.0 (stated in the service's capabilities) | opened |
 | Crops (`crops.sqlite`) | USDA Cropland Data Layer | BRP Gewaspercelen 2025, definitive (2.9 GB GeoPackage) | RVO | CC0 1.0 | opened |
+| Flood defences (`water.sqlite`, layer `dike`) | none | NBPW dike sections (`nbpw_dijktrajecten_formeel`), Rijkswaterstaat WFS | Rijkswaterstaat, Informatiehuis Water | Public domain (CC Public Domain Mark 1.0) | opened |
+| Flood scenarios with depth (`water.sqlite`, layer `flood`) | none | ROR third cycle, greatest water depth in four scenarios (`ror3:t10_`, `t100_`, `t1000_`, `t10000_maximale_waterdiepte`), the provinces' WFS | Interprovinciaal Overleg (the provinces) | CC0 1.0 | opened |
 | Water (`water.sqlite`) | NID, NHD | named lakes from the OSM street map (`tools/build_water.py --geo derived/geo-nl osm`) | OpenStreetMap contributors | ODbL 1.0 | opened |
 | Places (`places.sqlite`) | GNIS, Census | BAG `woonplaats` (towns and villages); OSM municipalities (`admin_level=8`, with `ref:gemeentecode`) and provinces (`admin_level=4`); OSM named places and points | Kadaster; OpenStreetMap contributors | CC0 1.0; ODbL 1.0 | opened |
 | Resource atlas (`atlas.sqlite`) | USGS, state records | none: shipped empty | | | |
@@ -106,6 +108,28 @@ Notes:
 
   Nursery stock, seed and propagation beds are left out.
 
+## Flood layers
+
+Layers → **Flood risk**, drawn from zoom 8 (the defences from zoom 7). Built by `tools/build_floods_nl.py` into `water.sqlite` (`feat` rows
+with origin `floods-nl`), served as their own tiles (`/api/map/flood/<z>/<x>/<y>?s=t100,dike`), so ticking them never refetches the base map.
+
+- **Flood defences.** The 237 formal dike sections of the NBPW (primary defences: dikes, dunes, dams) as lines, simplified to 2 m. The
+  name carries the section and its safety standard (the highest yearly chance of flooding it must still meet).
+- **Flood scenarios.** The ROR (EU Floods Directive) third-cycle maps give the greatest water depth in a flood of four likelihoods:
+  large (about 1 in 10 a year), medium (1 in 100), small (1 in 1,000) and very small (1 in 10,000). The provinces publish each as
+  4 to 7 million pieces on a 5 m grid. The tool reads them a page at a time (never keeping them whole), samples a 25 m grid, keeps every
+  second cell (50 m), merges the six depth classes into five (under 0.5, 0.5 to 1, 1 to 2, 2 to 5, over 5 m), traces and simplifies the
+  outlines (25 m) and leaves out pieces under 2.5 ha. It is a picture of roughly where and how deep, not a street-level survey.
+- **Counts.** Flooded area: 2,550 km² (1 in 10), 7,524 km² (1 in 100), 14,674 km² (1 in 1,000), 17,782 km² (1 in 10,000); 5,488 outline
+  blocks. `water.sqlite` grows from 1.4 MB to 37 MB.
+- **Wording.** The map says these are scenarios, not a forecast, not today's water level, and to follow NL-Alert and the safety region
+  (veiligheidsregio).
+- **Feeds that no longer work.** The INSPIRE zip and WFS on `geodata.nationaalgeoregister.nl` (still listed on data.overheid.nl) no
+  longer resolve, and PDOK has no GeoPackage of the depth maps. The live feed is the IPO's own WFS (`ldo-geoserver.lizard.net`, workspace
+  `ror3`), which data.overheid.nl lists for the CC0 dataset. The service is rate limited: the four scenarios took about 40 minutes.
+  Rijkswaterstaat's ROR layers (`ror_overstromingsrisico`, CC0) hold only the areas of potentially significant risk, without depth.
+- The `t10000` layer spells its legend property `LEGENDA`, the others `legenda`; the tool reads both.
+
 ## Help points
 
 OpenStreetMap is the source for help points. Classes added for the Netherlands (`tools/build_map_osm.py`):
@@ -131,6 +155,9 @@ Coverage, from Overpass counts on 17 November 2026 (search only) and the build:
 
 - **CC0 1.0** (Kadaster BAG, AHN, RVO BRP): no conditions; credited as a courtesy.
 - **ODbL 1.0** (OpenStreetMap): credit, and the map database stays open, as for the US map.
+
+- **Public domain** (Rijkswaterstaat NBPW) and **CC0 1.0** (the provinces' flood risk maps): no conditions. Not added to the credit line;
+  the datasets panel names them.
 
 The credit line on the Netherlands map is `© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · Natural Earth`
 (`engine/regions.json`). Natural Earth is the world base map every map set draws.
@@ -178,6 +205,7 @@ $B tools/build_places_nl.py $G/national.sqlite $S/bag-light.gpkg $G/admin.sqlite
 $B tools/fetch_ahn.py $S/ahn --box $BOX
 $B tools/build_terrain.py --src $S/ahn --out $G/terrain.sqlite --bbox $BOX --source-label "AHN4 DTM (Rijkswaterstaat, CC0 1.0), 1 arc-second"
 $B tools/build_crops_nl.py $S/brpgewaspercelen_definitief_2025.gpkg $G/crops.sqlite --box $BOX
+$B tools/build_floods_nl.py $G/water.sqlite --src $S/floods     # after build_water.py; reads about 23 million pieces, resumable
 .venv/bin/python packaging/region_maps.py build NL --src $G      # derived/packs/state-zips/Lastbook-Map-NL.zip, -Addresses-NL.zip
 .venv/bin/python packaging/region_maps.py manifest NL            # list them in derived/release/manifest-v1.json
 .venv/bin/python packaging/region_maps.py dev-manifest           # for running from source
@@ -209,6 +237,7 @@ Built on 17 November 2026 on an Apple Silicon Mac (10 cores, 32 GB) from the sou
 | `fetch_ahn.py` | 15 of 20 one-degree cells have AHN data; 221 MB | 2 min |
 | `build_terrain.py` | 1,689 tiles, zoom 4 to 12 | 5 s |
 | `build_crops_nl.py` | 16,207 parcels; 6,013 clickable cells | 45 s |
+| `build_floods_nl.py` | 237 dike sections; 5,488 flood outline blocks in four scenarios; `water.sqlite` 37 MB | about 40 min to download, 22 s to build |
 | `region_maps.py build NL` | map set 1,789,935,678 bytes; `Lastbook-Map-NL.zip` 910,079,442 bytes; `Lastbook-Addresses-NL.zip` 384,766,252 bytes | 1.5 min |
 
 Help points in the map, by class:
@@ -254,12 +283,8 @@ Setup's map choice lists the Netherlands under "Countries", above the 52 US stat
 
 ## Still undecided
 
-- **Flood layers.** The obvious next layer for this country:
-  - the primary flood defences (NBPW, public domain, WFS only; search only);
-  - the provinces' flood risk maps (IPO overstromingsrisicokaarten, CC0, opened on data.overheid.nl);
-  - LIWO's flood depth scenarios, for which no open bulk download was found.
-
-  Each needs a new kind of map layer.
+- **Flood scenarios per breach.** LIWO's scenarios for one dike breach at a time (depth, speed, arrival time) have no open bulk
+  download that was found; the ROR maps above are the open substitute.
 - **Dutch guides and documents.** The English Denk vooruit booklet and emergency kit list (Rijksoverheid, text CC0, images
   excluded; opened) belong in a library add-on pack, with guides pointing at their pages.
 - **Building heights** for the 3D view (3D BAG, CC BY 4.0).
@@ -274,11 +299,13 @@ Setup's map choice lists the Netherlands under "Countries", above the 52 US stat
   - every dataset in the sources table;
   - the BAG, BRP and AHN licence statements in PDOK's feeds and service capabilities;
   - the PDOK Bestuurlijke Gebieden licence (CC BY 4.0);
-  - the Denk vooruit copyright page.
+  - the Denk vooruit copyright page;
+  - for the flood layers, on 17 November 2026: the data.overheid.nl pages of "Overstromingsrisicokaarten" (IPO, CC-0 1.0, updated
+    23-04-2026) and of "Dataset Nationale Basisbestanden Primaire Waterkeringen" (Publiek domein, CC Public Domain Mark 1.0,
+    updated 12-11-2026), their catalogue records, and the capabilities of both WFS services (fees and access constraints "NONE").
 - **Search only:**
   - Overpass counts of help points;
-  - the huisartsenpost directories;
-  - the NBPW licence.
+  - the huisartsenpost directories.
 - **Not checked:**
   - the licence of RIVM's VZinfo huisartsenpost list;
   - whether Geofabrik's extract boundary leaves out any Dutch islands (the Wadden islands are in the build).

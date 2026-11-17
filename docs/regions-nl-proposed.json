@@ -21,7 +21,7 @@
   "ODbL-1.0": {
    "name": "Open Database License 1.0",
    "url": "https://opendatacommons.org/licenses/odbl/1-0/",
-   "attribution": "\"© OpenStreetMap contributors\"",
+   "attribution": "\"\u00a9 OpenStreetMap contributors\"",
    "share_alike": true,
    "verified": "as for the US map"
   },
@@ -46,6 +46,13 @@
    "attribution": "per source",
    "share_alike": true,
    "verified": "Het Waterschapshuis keringen feed opened; not used"
+  },
+  "PD-MARK-1.0": {
+   "name": "Public Domain Mark 1.0",
+   "url": "http://creativecommons.org/publicdomain/mark/1.0/",
+   "attribution": "none required",
+   "share_alike": false,
+   "verified": "data.overheid.nl record of the NBPW dataset"
   }
  },
  "country_layers": {
@@ -89,6 +96,24 @@
     "verified": "opened, used",
     "role": "primary",
     "notes": "tools/build_water.py --geo derived/geo-nl osm."
+   },
+   {
+    "dataset": "NBPW dijktrajecten (formeel), primary flood defences",
+    "publisher": "Rijkswaterstaat / Informatiehuis Water",
+    "url": "https://geo.rijkswaterstaat.nl/services/ogc/wvp/nbpw/wfs",
+    "licence": "PD-MARK-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "tools/build_floods_nl.py; layer dike."
+   },
+   {
+    "dataset": "ROR third cycle maximale waterdiepte, scenarios t10, t100, t1000, t10000",
+    "publisher": "Interprovinciaal Overleg (provinces)",
+    "url": "https://ldo-geoserver.lizard.net/geoserver/wfs",
+    "licence": "CC0-1.0",
+    "verified": "opened, used",
+    "role": "primary",
+    "notes": "tools/build_floods_nl.py; layer flood; 50 m grid, five depth classes."
    }
   ],
   "crops": [

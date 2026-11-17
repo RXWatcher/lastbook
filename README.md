@@ -30,6 +30,7 @@ instead of a US state and you get:
 | Orchards, vineyards, soft fruit, asparagus and rhubarb | RVO BRP Gewaspercelen 2025 | CC0 1.0 | 6,013 map cells from 16,207 parcels |
 | Find a town, municipality or province (Den Haag and Den Bosch work as well as BAG's 's-Gravenhage and 's-Hertogenbosch) | BAG towns and villages; OpenStreetMap municipalities and provinces | CC0 1.0; ODbL 1.0 | 67,160 names |
 | Named lakes | OpenStreetMap | ODbL 1.0 | 4,750 |
+| Flood risk (Layers → Flood risk, from zoom 8): primary flood defences as lines; flood scenarios with water depth for floods of about 1 in 10, 100, 1,000 and 10,000 years. Scenarios, not a forecast | Rijkswaterstaat NBPW; the provinces' flood risk maps (EU Floods Directive, ROR) | Public domain; CC0 1.0 | 237 dike sections; 17,782 km² in the largest scenario |
 
 The map screen follows the region: kilometres and metres, the Dutch credit line
 (`© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · Natural Earth`), "Find an address, postcode or town", the date the
@@ -159,7 +160,6 @@ Netherlands only from the files.
 
 - **Out-of-hours GP posts are thin.** OpenStreetMap has about 40 of the roughly 115. Call 112 or your own GP's number.
 - **Secondary addresses** (BAG nevenadressen) are not in the BAG file used, so they cannot be searched.
-- **No flood layers** yet: primary flood defences, flood-risk maps. They need a new kind of map layer.
 - **No Dutch guides or documents** yet. The guides are upstream's, US-based but mostly general (water, first aid, food,
   shelter). The government's English "Denk vooruit" booklet and emergency kit list are the obvious next addition.
 - **No building heights** for the 3D view, and no Caribbean Netherlands.
@@ -174,7 +174,7 @@ Netherlands only from the files.
 - `engine/address_nl.py`: Dutch address search, used by `server.places` when a Netherlands index is installed.
 - Setup accepts region ids (`NL`, `DE-BY`), and manifest entries marked `local_only` that are installed only from a file on the
   computer (`docs/SETUP-API.md`).
-- `tools/build_map_osm.py`, `build_bag.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`: the Netherlands
+- `tools/build_map_osm.py`, `build_bag.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`, `build_floods_nl.py`: the Netherlands
   builders. `tools/map_schema.py` holds the street-map format they share with `tools/build_map.py`.
 - `packaging/region_maps.py`: assembles, checks and zips a region's map set. `packaging/map_sets.py` holds the map-set
   contract it shares with `packaging/state_maps.py`.
