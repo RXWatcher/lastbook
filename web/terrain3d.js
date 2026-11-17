@@ -224,6 +224,8 @@ const Terrain3D = (() => {
       B.list = list; buildBldg(ex); render();
       if (!list.length) return '';
       const measured = list.filter(f => f.osm).length, guessed = list.filter(f => !f.est).length;
+      if (o.metric && !measured && guessed === list.length)   // a map built without heights: say so, never name a source it lacks
+        return `${list.length.toLocaleString()} buildings${capped ? ' (nearest shown)' : ''} · this map has no building heights; all are shown one storey tall`;
       return `${list.length.toLocaleString()} buildings${capped ? ' (nearest shown)' : ''} · ${measured ? `${measured.toLocaleString()} with mapped heights (OpenStreetMap), the rest ` : 'heights are '}${o.metric ? 'laser-survey (3D BAG)' : 'satellite'} estimates${guessed ? `; ${guessed.toLocaleString()} without one shown one storey tall` : ''}`;
     }
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ib); gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, idx, gl.STATIC_DRAW);

@@ -290,7 +290,7 @@ const MapView = (() => {
       ${GROUPS.filter(([g]) => LAYERS.some(l => l.group === g && offered(l))).map(([g, gl]) => `<fieldset><legend>${gl}</legend>${LAYERS.filter(l => l.group === g && offered(l)).map(l => `<label class="ly"><input type="checkbox" value="${l.id}"${st.on.has(l.id) ? ' checked' : ''}>${sym(l, 20)}<span>${escH(l.label)}</span><small>${st.on.has(l.id) ? (counts[l.id] || 0).toLocaleString() : ''}</small></label>`).join('')}</fieldset>`).join('')}
       ${AREAS.some(areaOffered) ? `<fieldset class="areas"><legend>Flood risk</legend>${AREAS.filter(areaOffered).map(a => `<label class="ar"><input type="checkbox" value="${a.id}"${st.areas.has(a.id) ? ' checked' : ''}><i class="msym style-ico" style="background:${a.col}">${a.sym}</i><span>${escH(a.label)}</span></label>`).join('')}
         <div class="floodkey" aria-label="Water depth colours">${FLOOD_DEPTH.map(([c, n]) => `<span><i style="background:${c}"></i>${n}</span>`).join('')}</div>
-        <p class="small muted" style="margin:4px 4px 0">${escH(caveat('flood'))} Drawn from zoom 8.</p></fieldset>` : ''}
+        <p class="small muted" style="margin:4px 4px 0">${escH(caveat('flood'))} Dikes show from zoom 7 and flood areas from zoom 8: zoom in if nothing appears.</p></fieldset>` : ''}
       ${st.have && !st.have.size ? '' : '<p class="small muted" style="margin:6px 2px 0">Numbers are places in the current view.</p>'}`;
     box.querySelector('.x').onclick = () => { box.hidden = true; $('layers-btn').setAttribute('aria-expanded', 'false') };
     box.querySelectorAll('label.ly input').forEach(i => i.onchange = () => { i.checked ? st.on.add(i.value) : st.on.delete(i.value); layersChanged() });
@@ -417,7 +417,7 @@ const MapView = (() => {
   }
   // Flood outlines and dike lines: their own tiles, so ticking them never refetches the base map (/api/map/flood, server.py flood_tile)
   function getFlood(z, x, y, want) {
-    const k = tileKey(z, x, y) + '|' + want; let t = st.floods.get(k);
+    const k = tileKey(z, x, y) + '|' + want + '|' + (st.ver || ''); let t = st.floods.get(k);   // with the data version: a rebuilt map is drawn afresh
     if (t?.failed && Date.now() - t.at > 5000) { st.floods.delete(k); t = undefined }
     if (!t && !st.floodPending.has(k) && st.floodPending.size < 6) {
       st.floodPending.add(k); const state = st;
