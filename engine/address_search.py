@@ -4,6 +4,7 @@ import re
 import sqlite3
 from pathlib import Path
 
+from engine import regions
 from engine.paths import ro_uri
 
 # Keep normalization compatible with tools/build_addresses.py.
@@ -14,16 +15,8 @@ WORDS = {
     'square': 'sq', 'north': 'n', 'south': 's', 'east': 'e', 'west': 'w',
     'mount': 'mt', 'saint': 'st',
 }
-STATE_NAMES = (
-    'Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|'
-    'District of Columbia|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|'
-    'Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|'
-    'Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|'
-    'New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|'
-    'Pennsylvania|Puerto Rico|Rhode Island|South Carolina|South Dakota|'
-    'Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming'
-).split('|')
-STATE_CODES = 'AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA PR RI SC SD TN TX UT VT VA WA WV WI WY'.split()
+STATE_NAMES = [region['name'] for region in regions.us_states()]
+STATE_CODES = [region['id'] for region in regions.us_states()]
 STATES = dict(zip((name.lower() for name in STATE_NAMES), STATE_CODES))
 ONES = 'zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen twenty'.split()
 ORDINALS = 'zeroth first second third fourth fifth sixth seventh eighth ninth tenth eleventh twelfth thirteenth fourteenth fifteenth sixteenth seventeenth eighteenth nineteenth twentieth'.split()

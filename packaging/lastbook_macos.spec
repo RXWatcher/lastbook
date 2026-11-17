@@ -33,7 +33,7 @@ def clean_sysconfig():
 
 datas = files('web', 'web') + files('content', 'content', 'gaps.json') + files('content/topics', 'content/topics', '*.json')
 binaries = []
-hidden = ['server', 'retrieval', 'assistant', 'llm_local', 'engine.paths', 'engine.library', 'engine.saved_pages', 'engine.address_search', 'bridge', 'shell_macos', 'PyObjCTools.AppHelper']
+hidden = ['server', 'retrieval', 'assistant', 'llm_local', 'engine.paths', 'engine.library', 'engine.saved_pages', 'engine.address_search', 'engine.regions', 'bridge', 'shell_macos', 'PyObjCTools.AppHelper']
 # The optional local AI's runner (packaging/llm/build_llm_macos.sh), in Contents/Frameworks/llm/. The model itself never ships.
 LLM = ROOT / 'derived' / 'llm' / 'bin-mac'
 binaries += [(str(LLM / 'lastbook-llm'), 'llm')]
@@ -41,6 +41,7 @@ datas += [(str(LLM / 'LICENSE-llama.cpp.txt'), 'llm')]
 datas += [(str(SHIP / 'setup' / 'manifest-v1.json'), 'setup')]   # what first-run setup can install
 hidden += collect_submodules('engine.setup')
 datas += [(str(ROOT / 'engine' / 'setup' / 'roots.pem'), 'engine/setup')]   # the only roots setup's downloader trusts
+datas += [(str(ROOT / 'engine' / 'regions.json'), 'engine')]   # the regions with a detailed map (engine/regions.py)
 for package in ('libzim', 'pypdfium2', 'pypdfium2_raw'):   # loaded only when a ZIM or PDF is first opened, and they carry native libraries
     d, b, h = collect_all(package)
     datas += d
