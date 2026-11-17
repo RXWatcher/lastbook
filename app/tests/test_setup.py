@@ -1247,6 +1247,10 @@ class RegionMaps(Maps):
         self.assertIsNone(note.get('error'))
         self.assertEqual(install.map_name(lib), 'NL')
 
+    def test_state_names_the_found_folder(self):
+        mf, _ = self.nl_manifest()
+        self.assertEqual(self.setup(manifest=mf).state()['found_folder'], str(self.parent))
+
     def test_country_wording(self):
         mf, _ = self.nl_manifest()
         mf.current['maps'][0]['available'] = False

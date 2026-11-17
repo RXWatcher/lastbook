@@ -414,7 +414,7 @@ class Setup:
         self.manifest.fetch_once()
         hw = self.hardware()
         return {'mode': self.mode, 'hardware': hw, 'manifest': self.manifest.public(), 'current': self.current_info(),
-                'found': self.found(), 'recommend': self.recommend(hw), 'job': self.public_job()}
+                'found': self.found(), 'found_folder': str(self.default_parent), 'recommend': self.recommend(hw), 'job': self.public_job()}
 
     def public_job(self):
         with self.lock:

@@ -188,3 +188,5 @@ Regions outside the US (added 2026-11-17, `engine/regions.py`):
   computer (`found[]`, or `use`), checked against the manifest's size and SHA-256 as any other file, and never downloads it.
   `start` with such a map and no file answers `{code: "local_only"}` with a sentence naming the file and the folder to put it
   in; a local-only address index without its file is skipped unless it was asked for by name.
+- `state.found_folder` is the folder setup looks in for such files (as well as the open library), so the screen can say where to
+  put them.
