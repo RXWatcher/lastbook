@@ -85,6 +85,83 @@ class Heights(unittest.TestCase):
 
 
 class Download(unittest.TestCase):
+    def serve(self, body):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            def log_message(self, *a):
+                pass
+
+            def do_GET(self):
+                rng = self.headers.get('Range')
+                start = int(rng.split('=')[1].split('-')[0]) if rng else 0
+                if start >= len(body) and rng:
+                    self.send_response(416)
+                    self.send_header('Content-Range', f'bytes */{len(body)}')
+                    self.end_headers()
+                    return
+                self.send_response(206 if rng else 200)
+                self.send_header('Content-Length', str(len(body) - start))
+                if rng:
+                    self.send_header('Content-Range', f'bytes {start}-{len(body) - 1}/{len(body)}')
+                self.end_headers()
+                self.wfile.write(body[start:])
+
+        srv = http.server.ThreadingHTTPServer(('127.0.0.1', 0), Handler)
+        threading.Thread(target=srv.serve_forever, daemon=True).start()
+        self.addCleanup(srv.shutdown)
+        return tmp, f'http://127.0.0.1:{srv.server_port}/f.bin'
+
+    def test_a_part_longer_than_the_file_is_fetched_again(self):
+        """A 416 means the .part reaches the end, or past it: only a .part of exactly the file's size counts as finished."""
+        body = bytes(range(256)) * 100
+        tmp, url = self.serve(body)
+        (tmp / 'f.bin.part').write_bytes(b'x' * (len(body) + 500))
+        self.assertEqual(fetch_3dbag.download(url, tmp / 'f.bin').read_bytes(), body)
+
+    def test_a_complete_part_is_kept(self):
+        body = bytes(range(256)) * 100
+        tmp, url = self.serve(body)
+        (tmp / 'f.bin.part').write_bytes(body)
+        self.assertEqual(fetch_3dbag.download(url, tmp / 'f.bin').read_bytes(), body)
+
+    def test_a_short_download_is_not_called_finished(self):
+        body = bytes(range(256)) * 100
+        tmp, url = self.serve(body)
+        real = fetch_3dbag.urllib.request.urlopen
+
+        class Short:
+            def __init__(self, resp):
+                self.resp, self.status, self.headers = resp, resp.status, resp.headers
+            def read(self, n):
+                return self.resp.read(min(n, 1000)) if not getattr(self, 'done', False) else b''
+            def __enter__(self):
+                return self
+            def __exit__(self, *a):
+                self.resp.close()
+        calls = []
+
+        def cut(req, timeout=60):
+            r = real(req, timeout=timeout)
+            calls.append(1)
+            if len(calls) == 1:
+                s = Short(r)
+                orig = s.read
+                def read(n, s=s, orig=orig):
+                    b = orig(n)
+                    s.done = True
+                    return b
+                s.read = read
+                return s
+            return r
+        fetch_3dbag.urllib.request.urlopen = cut
+        self.addCleanup(setattr, fetch_3dbag.urllib.request, 'urlopen', real)
+        with self.assertRaises(OSError):
+            fetch_3dbag.download(url, tmp / 'f.bin')
+        self.assertFalse((tmp / 'f.bin').exists())
+        self.assertEqual(fetch_3dbag.download(url, tmp / 'f.bin').read_bytes(), body)       # the next run resumes and completes
+
     def test_resumes(self):
         tmp = Path(tempfile.mkdtemp())
         self.addCleanup(shutil.rmtree, tmp, ignore_errors=True)

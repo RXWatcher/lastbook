@@ -126,8 +126,21 @@ class Heights:
         self.db.close()
 
 
-def download(url, dest, log=lambda m: None):
-    """Fetches url to dest, continuing <dest>.part where an earlier run stopped. A finished dest is left alone."""
+def _total(headers, have, status):
+    """The whole file's size, from Content-Range (bytes a-b/N or bytes */N) or Content-Length; None when the server gives neither."""
+    rng = headers.get('Content-Range') or ''
+    if '/' in rng and rng.rsplit('/', 1)[1].isdigit():
+        return int(rng.rsplit('/', 1)[1])
+    length = headers.get('Content-Length')
+    if length and length.isdigit():
+        return int(length) + (have if status == 206 else 0)
+    return None
+
+
+def download(url, dest, log=lambda m: None, _again=True):
+    """Fetches url to dest, continuing <dest>.part where an earlier run stopped. A finished dest is left alone. The file is called
+    finished only at the size the server gives; a .part that does not fit is fetched again, and a cut-off download raises (run again
+    to resume)."""
     dest = Path(dest)
     if dest.exists():
         return dest
@@ -138,19 +151,29 @@ def download(url, dest, log=lambda m: None):
     try:
         resp = urllib.request.urlopen(req, timeout=60)
     except urllib.error.HTTPError as e:
-        if e.code != 416:                     # the whole file is already in the .part
+        if e.code != 416:
             raise
-        part.replace(dest)
-        return dest
+        total = _total(e.headers, 0, 416)
+        if total is not None and total == have:          # the whole file is already in the .part
+            part.replace(dest)
+            return dest
+        part.unlink(missing_ok=True)                      # longer than the file, or of no known size: start again
+        if not _again:
+            raise
+        return download(url, dest, log, _again=False)
     with resp:
-        if have and resp.status != 206:       # the server ignored the Range: start again
+        if have and resp.status != 206:                   # the server ignored the Range: start again
             have = 0
+        total = _total(resp.headers, have, resp.status)
         with open(part, 'ab' if have else 'wb') as f:
-            t0, got = time.time(), have
+            t0, got, next_log = time.time(), have, have + 256 * CHUNK
             while chunk := resp.read(CHUNK):
                 f.write(chunk); got += len(chunk)
-                if (got // CHUNK) % 256 == 0:
+                if got >= next_log:
+                    next_log += 256 * CHUNK
                     log(f'{got / 1e9:.1f} GB ({(got - have) / 1e6 / max(1, time.time() - t0):.0f} MB/s)')
+    if total is not None and got != total:
+        raise OSError(f'{dest.name}: the download stopped at {got:,} of {total:,} bytes; run again to resume')
     part.replace(dest)
     return dest
 
