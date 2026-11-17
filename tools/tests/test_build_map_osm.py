@@ -63,6 +63,27 @@ class Classify(unittest.TestCase):
         self.assertEqual(build_map_osm.classify({'building': 'yes', 'amenity': 'pharmacy'}, 'area'), [('poi', 'pharmacy', None)])
 
 
+class EmergencyDepartments(unittest.TestCase):
+    """A hospital that OpenStreetMap does not tag emergency=yes, but which has an emergency-ward entrance mapped at it, has an SEH."""
+
+    def test_entrance_marks_hospital(self):
+        db = sqlite3.connect(':memory:')
+        map_schema.create_map_tables(db)
+        w = map_schema.MapWriter(db)
+        w.poi('hospital', 'ZGT Hengelo', 6.7900, 52.2650)
+        w.poi('hospital', 'Far away hospital', 5.0000, 52.0000)
+        w.poi('hospital_seh', 'Already tagged', 4.9000, 52.3700)
+        w.poi('clinic', 'A clinic beside an entrance', 6.7901, 52.2651)
+        n = build_map_osm.mark_emergency_departments(db, [(6.7915, 52.2660)])      # about 140 m away
+        self.assertEqual(n, 1)
+        self.assertEqual(dict(db.execute('SELECT name, cls FROM poi')), {
+            'ZGT Hengelo': 'hospital_seh', 'Far away hospital': 'hospital', 'Already tagged': 'hospital_seh', 'A clinic beside an entrance': 'clinic'})
+
+    def test_entrance_nodes_are_collected(self):
+        self.assertTrue(build_map_osm.is_emergency_entrance({'emergency': 'emergency_ward_entrance'}))
+        self.assertFalse(build_map_osm.is_emergency_entrance({'emergency': 'defibrillator'}))
+
+
 class Schema(unittest.TestCase):
     def test_pack_unchanged(self):
         """map_schema.pack is build_map.pack moved: nparts, then npts and delta-coded lon/lat x 1e6 per part."""

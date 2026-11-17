@@ -19,7 +19,7 @@ huisartsenspoedpost, spoedpost, dokterswacht or HAP are 'huisartsenpost' (out-of
 own for them; tools/build_hap_nl.py adds the ones it lacks); defibrillators and emergency assembly points keep their emergency=*
 value.
 """
-import argparse, re, sqlite3, sys, time
+import argparse, math, re, sqlite3, sys, time
 from pathlib import Path
 
 from map_schema import ROAD_Z, LANDUSE_KEEP, PLACE_Z, POI_KEEP, simplify, bbox, pack, area_z, create_map_tables, MapWriter
@@ -73,6 +73,27 @@ def classify(tags, kind):
     if cls:
         out.append(('poi', cls, None))
     return out
+
+
+def is_emergency_entrance(tags):
+    return tags.get('emergency') == 'emergency_ward_entrance'
+
+
+def mark_emergency_departments(db, entrances, radius_m=300):
+    """A hospital not tagged emergency=yes but with an emergency-ward entrance (emergency=emergency_ward_entrance) mapped within
+    radius_m has an emergency department (SEH): OpenStreetMap often maps the entrance and not the hospital's tag. Returns how many
+    were marked."""
+    if not entrances:
+        return 0
+    dlat = radius_m / 111_320
+    marked = 0
+    for pid, lon, lat in db.execute("SELECT id, lon, lat FROM poi WHERE cls='hospital'").fetchall():
+        dlon = dlat / max(0.2, math.cos(math.radians(lat)))
+        if any(abs(elon - lon) <= dlon and abs(elat - lat) <= dlat and
+               ((elon - lon) / dlon) ** 2 + ((elat - lat) / dlat) ** 2 <= 1 for elon, elat in entrances):
+            db.execute("UPDATE poi SET cls='hospital_seh' WHERE id=?", (pid,))
+            marked += 1
+    return marked
 
 
 def poi_class(tags):
@@ -168,6 +189,8 @@ def build(pbf, out, box=None, water=None, land=None, admin=None):
         def node(self, n):
             if n.tags and n.location.valid():
                 tags = dict(n.tags)
+                if is_emergency_entrance(tags):
+                    entrances.append((n.location.lon, n.location.lat))
                 if 'place' in tags or poi_class(tags):
                     handle(tags, 'node', [[n.location.lon, n.location.lat]])
 
@@ -211,7 +234,9 @@ def build(pbf, out, box=None, water=None, land=None, admin=None):
             if parts:
                 handle(tags, 'area', parts)
 
+    entrances = []
     Handler().apply_file(str(pbf), locations=True, filters=[osmium.filter.KeyFilter(*KEYS)])
+    print(f'emergency departments from entrances: {mark_emergency_departments(db, entrances)} hospitals', flush=True)
     if adm is not None:
         adm.commit()
         adm.close()
