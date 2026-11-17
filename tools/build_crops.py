@@ -81,21 +81,10 @@ def png_rgba(rgba):
             + chunk(b'IDAT', zlib.compress(raw, 6)) + chunk(b'IEND', b''))
 
 
-def state(path):
-    """One state's raster -> (points, {(x,y): z13 class tile})."""
-    t0 = time.time()
-    with tifffile.TiffFile(path) as tf:
-        pg = tf.pages[0]
-        a = pg.asarray()
-        tie, sc = pg.tags['ModelTiepointTag'].value, pg.tags['ModelPixelScaleTag'].value
-    X0, Y0, S = tie[3], tie[4], sc[0]
-    cls = LUT[a]
-    del a
-    rows, cols = np.nonzero(cls)
-    if not rows.size:
-        return [], {}, path.name
+def raster_cells(cls, rows, cols, X0, Y0, S, inverse, min_px=20):
+    """Clickable cells: the dominant crop class in each BLOCK x BLOCK cell of a class raster (top-left X0, Y0, pixel size S in the
+    raster's projection; inverse() turns its x, y into lon, lat). Returns (cell, class, its pixels, all crop pixels, lon, lat)."""
     c = cls[rows, cols]
-    # clickable cells: dominant crop per BLOCK x BLOCK cell
     br, bc = rows // BLOCK, cols // BLOCK
     key = (br.astype(np.int64) * 100000 + bc) * 32 + c
     u, n = np.unique(key, return_counts=True)
@@ -105,14 +94,16 @@ def state(path):
     first = np.r_[True, cell[1:] != cell[:-1]]
     tot = np.add.reduceat(n, np.nonzero(first)[0])
     cell, ci, n = cell[first], ci[first], n[first]
-    keep = tot >= 20
+    keep = tot >= min_px
     cell, ci, n, tot = cell[keep], ci[keep], n[keep], tot[keep]
     x = X0 + ((cell % 100000) * BLOCK + BLOCK / 2) * S
     y = Y0 - ((cell // 100000) * BLOCK + BLOCK / 2) * S
     lon, lat = inverse(x, y)
-    pts = [(CODES[k - 1], round(float(m) * ACRE_PER_PX, 1), round(float(t) * ACRE_PER_PX, 1), float(lo), float(la), int(cl))
-           for k, m, t, lo, la, cl in zip(ci, n, tot, lon, lat, cell)]
-    # overlay: every z13 tile touched by a crop pixel, sampled nearest-neighbour from the raster
+    return cell, ci, n, tot, lon, lat
+
+
+def raster_tiles(cls, rows, cols, X0, Y0, S, inverse, forward):
+    """The overlay: every z13 tile touched by a crop pixel, sampled nearest-neighbour from the class raster."""
     plon, plat = inverse(X0 + (cols[::7] + .5) * S, Y0 - (rows[::7] + .5) * S)
     nz = 2 ** MAXZ
     tx = ((plon + 180) / 360 * nz).astype(int)
@@ -130,6 +121,46 @@ def state(path):
         v[ok] = cls[rr[ok], cc[ok]]
         if v.any():
             tiles[(x_, y_)] = v
+    return tiles
+
+
+def write_tiles(db, tiles, palette):
+    """The overlay at zoom 13, then each zoom down to 7 made from the one above."""
+    level = tiles
+    for z in range(MAXZ, MINZ - 1, -1):
+        for (x, y), v in level.items():
+            db.execute('INSERT OR REPLACE INTO tile VALUES (?,?,?,?)', (z, x, y, png_rgba(palette[v])))
+        if z > MINZ:
+            nxt = {}
+            for (x, y) in {(x // 2, y // 2) for x, y in level}:
+                q = np.zeros((512, 512), np.uint8)
+                for dy in (0, 1):
+                    for dx in (0, 1):
+                        v = level.get((2 * x + dx, 2 * y + dy))
+                        if v is not None:
+                            q[dy * 256:(dy + 1) * 256, dx * 256:(dx + 1) * 256] = v
+                nxt[(x, y)] = down(q)
+            level = nxt
+        db.commit()
+
+
+def state(path):
+    """One state's raster -> (points, {(x,y): z13 class tile})."""
+    t0 = time.time()
+    with tifffile.TiffFile(path) as tf:
+        pg = tf.pages[0]
+        a = pg.asarray()
+        tie, sc = pg.tags['ModelTiepointTag'].value, pg.tags['ModelPixelScaleTag'].value
+    X0, Y0, S = tie[3], tie[4], sc[0]
+    cls = LUT[a]
+    del a
+    rows, cols = np.nonzero(cls)
+    if not rows.size:
+        return [], {}, path.name
+    cell, ci, n, tot, lon, lat = raster_cells(cls, rows, cols, X0, Y0, S, inverse)
+    pts = [(CODES[k - 1], round(float(m) * ACRE_PER_PX, 1), round(float(t) * ACRE_PER_PX, 1), float(lo), float(la), int(cl))
+           for k, m, t, lo, la, cl in zip(ci, n, tot, lon, lat, cell)]
+    tiles = raster_tiles(cls, rows, cols, X0, Y0, S, inverse, forward)
     print(f'{path.name}: {len(pts):,} cells, {len(tiles):,} tiles, {time.time() - t0:.0f}s', flush=True)
     return pts, tiles, path.name
 
@@ -167,22 +198,7 @@ def main():
             for k, v in tiles.items():  # states share border tiles: merge
                 allt[k] = v if k not in allt else np.where(allt[k] > 0, allt[k], v)
             db.commit()
-    level = allt
-    for z in range(MAXZ, MINZ - 1, -1):
-        for (x, y), v in level.items():
-            db.execute('INSERT OR REPLACE INTO tile VALUES (?,?,?,?)', (z, x, y, png_rgba(PALETTE[v])))
-        if z > MINZ:
-            nxt = {}
-            for (x, y) in {(x // 2, y // 2) for x, y in level}:
-                q = np.zeros((512, 512), np.uint8)
-                for dy in (0, 1):
-                    for dx in (0, 1):
-                        v = level.get((2 * x + dx, 2 * y + dy))
-                        if v is not None:
-                            q[dy * 256:(dy + 1) * 256, dx * 256:(dx + 1) * 256] = v
-                nxt[(x, y)] = down(q)
-            level = nxt
-        db.commit()
+    write_tiles(db, allt, PALETTE)
     db.execute('INSERT OR REPLACE INTO meta VALUES (?,?)', ('built', json.dumps({'cells': npts, 'year': YEAR, 'states': len(files), 'at': time.strftime('%Y-%m-%dT%H:%M:%S')})))
     db.commit()
     print(f'done: {npts:,} clickable cells, {len(allt):,} detailed tiles', flush=True)
