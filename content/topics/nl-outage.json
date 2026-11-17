@@ -1,0 +1,177 @@
+{
+ "id": "nl-outage",
+ "mode": "now",
+ "needs_doc": "nl-denkvooruit-booklet",
+ "title": "Netherlands: a long power or water outage",
+ "short": "What to expect over three days without power, and the government's pages for power cuts and no tap water",
+ "intro": "A three-day power-outage example from the Dutch government's booklet, with the steps it says to take beforehand, plus the government's pages for a power cut and for no water from the tap. Shown only in a library that holds the Netherlands documents.",
+ "keywords": [
+  "netherlands",
+  "dutch",
+  "power cut",
+  "power outage",
+  "blackout",
+  "no power",
+  "storing",
+  "tenne",
+  "0800-9009",
+  "no water",
+  "drinking water",
+  "tap",
+  "boil",
+  "water company",
+  "waterstoring",
+  "cold house",
+  "candles",
+  "power bank",
+  "battery radio",
+  "cash",
+  "card payments"
+ ],
+ "choices": [
+  {
+   "id": "power",
+   "label": "The power is out and may stay out",
+   "hint": "The first hours: who to call, what to switch off, keeping warm",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 7,
+     "label": "No power: what to do during a power cut",
+     "note": "Do not call 112; the national power failure number is 0800-9009. Listen to regional radio, unplug sockets, keep warm in the smallest rooms, check on people who need help."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 8,
+     "label": "Timeline: the first hours of a grid power outage",
+     "note": "From the start to +8 hours: what stops working, when 112 gets hard to reach, when phone signal fails and when an NL-Alert arrives."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 21,
+     "label": "Day 1 example: light, warmth, a radio, non-perishable food",
+     "note": "A made-up evening without power and the steps it says to take beforehand for light and warmth, news and food."
+    }
+   ]
+  },
+  {
+   "id": "water",
+   "label": "There is no water from the tap",
+   "hint": "Check the main tap, ask neighbours, emergency water after 24 hours",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 8,
+     "label": "Drinking water: no water from the tap",
+     "note": "Check the main tap and ask neighbours; after 24 hours without water, water companies supply emergency water from tanks; a boil notice comes by NL-Alert."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 22,
+     "label": "Day 2 example: no running water, low phone battery",
+     "note": "The impact spreads on day 2; steps to take beforehand include 3 litres of water per person per day for 72 hours, stored cool and dark."
+    }
+   ]
+  },
+  {
+   "id": "days",
+   "label": "It has been days: what comes next?",
+   "hint": "Information, neighbours, emergency support offices",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 9,
+     "label": "Timeline: from +8 hours to +72 hours",
+     "note": "Traffic and petrol pumps, water and food at 24 hours, batteries at 36, neighbours and the radio at 48, government information at 72."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 23,
+     "label": "Day 3 example: help from neighbours and an agreed plan",
+     "note": "A central place in the neighbourhood has information and help; steps to take beforehand for contact with others."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 27,
+     "label": "Emergency support offices run by the municipality",
+     "note": "Where municipalities are setting up local offices for information and urgent help if an emergency lasts a long time."
+    }
+   ]
+  },
+  {
+   "id": "info",
+   "label": "My phone is dying and I need reliable news",
+   "hint": "Power bank, one phone on, regional radio",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 22,
+     "label": "Steps for a low phone battery and for reliable information",
+     "note": "Keep a full power bank, set screen brightness low and close apps, keep one phone on for NL-Alerts, and use only reliable sources."
+    },
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 3,
+     "label": "Use a battery radio for the regional broadcaster",
+     "note": "The regional public broadcaster can keep broadcasting when the power and internet are down; the frequency list is on the next page."
+    },
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 4,
+     "label": "FM frequencies by region",
+     "note": "Transmitter locations and MHz for the regional radio stations."
+    }
+   ]
+  }
+ ],
+ "limits": [
+  {
+   "text": "A power cut is not an acute emergency: do not call 112 for it. The national power failure number is 0800-9009.",
+   "doc": "nl-denkvooruit-pages",
+   "page": 7
+  },
+  {
+   "text": "In a long power outage 112 and the emergency services can be hard to reach because many people are asking for help.",
+   "doc": "nl-denkvooruit-booklet",
+   "page": 8
+  },
+  {
+   "text": "If tap water does not meet quality standards, an NL-Alert will advise boiling it for 3 minutes first.",
+   "doc": "nl-denkvooruit-pages",
+   "page": 8
+  },
+  {
+   "text": "If you have run out of food, drink or medicines in a long emergency, an emergency support office can tell you what to do.",
+   "doc": "nl-denkvooruit-booklet",
+   "page": 27
+  }
+ ],
+ "prepare": [
+  {
+   "doc": "nl-denkvooruit-booklet",
+   "page": 13,
+   "label": "The kit list: water, food, light, warmth, radio, cash",
+   "note": "At least 3 litres of water per person per day, non-perishable food, candles and matches, blankets, a battery radio, a charged power bank and cash."
+  },
+  {
+   "doc": "nl-denkvooruit-pages",
+   "page": 8,
+   "label": "Water to store, and a clean bucket or bottles for emergency water",
+   "note": "Bottled water for at least 72 hours, 3 litres per person per day, plus a bucket, empty bottles or a jerry can for collecting emergency water."
+  },
+  {
+   "doc": "nl-denkvooruit-pages",
+   "page": 7,
+   "label": "Think ahead: what in your home depends on electricity",
+   "note": "Check what depends on power, think through a long cut, and put together a kit with water, food, a torch, a radio and a power bank."
+  }
+ ],
+ "learn": [
+  {
+   "doc": "nl-denkvooruit-booklet",
+   "label": "Prepare for an emergency situation (the whole booklet, text-only edition)",
+   "note": "The 32-page booklet in English, with the three-day power-outage example on pages 20 to 23."
+  }
+ ],
+ "related": ["nl-kit", "nl-alerts", "nl-flood", "power", "water", "food", "comms"]
+}
