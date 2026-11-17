@@ -329,6 +329,16 @@ class Merge(unittest.TestCase):
             merge.add(self.data, self.addon)
         self.assertEqual(theirs.read_text(encoding='utf-8'), 'somebody else')
 
+    def test_an_add_stopped_half_way_can_be_done_again(self):
+        """Files an interrupted add copied (the same bytes, named by no record) are not in the way of the next try."""
+        for r in self.addon_records():
+            for key in ('path', 'text_path'):
+                dst = self.data / 'library-data' / r[key]
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                dst.write_bytes((self.addon / 'library-data' / r[key]).read_bytes())
+        merge.add(self.data, self.addon)
+        self.assertTrue(set(r['id'] for r in self.addon_records()) <= {r['id'] for r in self.cat()})
+
     def test_a_refused_add_writes_nothing(self):
         """A search index the add-on's pages do not fit: refused before any file is copied."""
         db = self.data / 'library-data' / 'search.sqlite'

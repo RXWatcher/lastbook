@@ -1350,6 +1350,43 @@ class Addons(RegionMaps):
         self.assertEqual([i['kind'] for i in j['items']], ['map'])
         self.assertEqual(self.wait(s)['state'], 'done')
 
+    def test_a_wrong_addon_file_is_skipped_never_downloaded(self):
+        """The add-on is optional: a file that does not match leaves the map installed and the documents out, with no download."""
+        mf = self.addon_manifest()
+        placed = self.parent / self.addon_zip.name
+        data = bytearray(placed.read_bytes()); data[-1] ^= 0xFF; placed.write_bytes(bytes(data))
+        cur = self.library()
+        s = self.setup('manage', current=cur, manifest=mf)
+        with mock.patch.object(download, 'Download', side_effect=AssertionError('a local-only add-on must never be downloaded')):
+            s.start(None, False, map_id='NL')
+            j = self.wait(s)
+        self.assertEqual(j['state'], 'done')
+        self.assertEqual(self.setup('manage', current=cur, manifest=mf).current_info()['add_ons'], [])
+
+    def with_nl_map(self, cur):
+        (cur / 'map-set.json').write_text(json.dumps({'name': 'NL', 'files': {}}))
+        meta = json.loads((cur / 'pack.json').read_text())
+        meta['add_ons'] = [{'name': 'nl-test', 'ids': [], 'revision': ''}]
+        (cur / 'pack.json').write_text(json.dumps(meta))
+        return cur
+
+    def test_an_upgrade_keeps_the_addon(self):
+        mf = self.addon_manifest()
+        mf.current['packs'][0]['revision'] = 'newer'
+        cur = self.with_nl_map(self.library())
+        s = self.setup('manage', current=cur, manifest=mf)
+        with mock.patch.object(api.Setup, '_run', lambda self: None), mock.patch.object(hardware, 'disk_of', lambda p: (10 ** 12, 10 ** 12)):
+            j = s.start('small', False)
+        self.assertIn('addon', [i['kind'] for i in j['items']], j)
+
+    def test_a_repair_keeps_the_addon(self):
+        mf = self.addon_manifest()
+        cur = self.with_nl_map(self.library())
+        s = self.setup('manage', current=cur, manifest=mf)
+        with mock.patch.object(api.Setup, '_run', lambda self: None):
+            j = s.start(repair=True)
+        self.assertIn('addon', [i['kind'] for i in j['items']], j)
+
     def test_an_addon_counts_its_own_download(self):
         work = self.tmp / 'work'
         (work / 'downloads').mkdir(parents=True)

@@ -287,7 +287,7 @@
       ? `Put Lastbook-Map-${esc(selected)}.zip (and Lastbook-Addresses-${esc(selected)}.zip for address search) in ${esc(home(S.found_folder || ''))}, then reopen setup.`
       : `Found on this computer · ${size(disk)} on disk. Nothing to download.`;
     const docs = sel && ((S.manifest && S.manifest.addons) || []).find(x => x.with_map === sel.id && x.available !== false && foundFor('addon', x.id));
-    if (docs && !localMissing(selected) && !((cur() || {}).add_ons || []).includes(docs.id)) hint += ` ${esc(docs.title)}: added too.`;
+    if (docs && !mapIncluded && !localMissing(selected) && !((cur() || {}).add_ons || []).includes(docs.id)) hint += ` ${esc(docs.title)}: added too.`;   // only when the map is being installed: that is when setup adds them
     box.innerHTML = `<h2>${ico('map')}Your local map</h2>
       <p class="s-mapnote">Local streets, buildings, water and places to get help. Available offline.</p>
       ${now === 'us' ? '<p class="s-mapnote">All includes every state map. Choose your state for offline street-address search.</p>' : ''}

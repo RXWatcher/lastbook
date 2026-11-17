@@ -227,7 +227,9 @@ def add(data, addon):
             raise Refused(f'The library already has {clash[0]}, and it is not from this add-on. Nothing was changed.')
         named = record_files(others)
         for rel in staged.files:
-            if rel in named or ((data / rel).exists() and rel not in own_files):
+            here = data / rel
+            leftover = here.is_file() and rel not in named and sha256(here) == sha256(staged.root / rel)   # an add stopped half way
+            if rel in named or (here.exists() and rel not in own_files and not leftover):
                 raise Refused(f'The library already has a file at {rel}, and it is not from this add-on. Nothing was changed.')
         db = lib / 'search.sqlite'
         con = sqlite3.connect(db)

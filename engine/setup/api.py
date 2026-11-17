@@ -519,7 +519,7 @@ class Setup:
                 addresses = None
             # documents that go with the map being installed (engine/setup/addons.py): only from a file on this computer, and only
             # when the library does not have them yet; one that is not here is skipped
-            with_map = (mp or {}).get('id') or (pack or {}).get('map')
+            with_map = (mp or {}).get('id') or (pack or {}).get('map') or (cur.get('map') if pack and target == self.current else None)
             extras = [a for a in self.manifest.current.get('addons', []) if with_map and a.get('with_map') == with_map and a['available']
                       and (pack or a['id'] not in cur.get('add_ons', [])) and not _local_missing(a, srcs)]
             names = ([f['name'] for f in pack['files']] if pack else []) + ([model['file']] if model else []) + ([f['name'] for f in mp['files']] if mp else []) + ([f['name'] for f in addresses['files']] if addresses else []) + [f['name'] for a in extras for f in a['files']]
@@ -584,16 +584,22 @@ class Setup:
             model = self.manifest.model() if (ai or cur['model']) else None
             parent, target = self.current.parent, self.current
             work = _work_for(target)
-            srcs = {f['name']: f['path'] for f in self.found() if f.get('size_ok') and f['kind'] in ('pack', 'model')}
+            srcs = {f['name']: f['path'] for f in self.found() if f.get('size_ok') and f['kind'] in ('pack', 'model', 'addon')}
             items = [{'id': pack['id'], 'kind': 'pack', 'title': pack['title'], 'state': 'waiting', 'bytes_done': 0,
                       'bytes_total': pack['installed_bytes'], 'rate_bps': 0, 'eta_s': None, 'error': None}]
+            # a repair that replaces the library brings its add-ons back, from their files on this computer
+            extras = [a for a in self.manifest.current.get('addons', []) if a['id'] in cur.get('add_ons', []) and a['available']
+                      and not _local_missing(a, srcs)]
+            for a in extras:
+                items.append({'id': a['id'], 'kind': 'addon', 'title': a['title'], 'state': 'waiting', 'bytes_done': 0,
+                              'bytes_total': a['download_bytes'], 'rate_bps': 0, 'eta_s': None, 'error': None})
             if model:
                 items.append({'id': model['id'], 'kind': 'model', 'title': model['title'], 'state': 'waiting', 'bytes_done': 0,
                               'bytes_total': model['size'], 'rate_bps': 0, 'eta_s': None, 'error': None})
-            names = [f['name'] for f in pack['files']] + ([model['file']] if model else [])
+            names = [f['name'] for f in pack['files']] + ([model['file']] if model else []) + [f['name'] for a in extras for f in a['files']]
             self.job = {'id': uuid.uuid4().hex[:12], 'state': 'waiting', 'items': items, 'error': None, 'started': _now(), 'folder': str(target),
                         'repair': True,
-                        'plan': {'pack': pack, 'model': model, 'parent': str(parent), 'target': str(target), 'work': str(work),
+                        'plan': {'pack': pack, 'model': model, 'addons': extras, 'parent': str(parent), 'target': str(target), 'work': str(work),
                                  'sources': {k: v for k, v in srcs.items() if k in names}, 'explicit': False, 'retried': {},
                                  'switch': True, 'repair': True}}
             s = self._settings()
@@ -1073,19 +1079,26 @@ class Setup:
         """Documents that go with the map (engine/setup/addons.py): checked against the manifest's SHA-256 like any file, then put into
         the library this job makes, or the open one. The person's own file is left where it was."""
         entry = next(a for a in plan.get('addons') or [] if a['id'] == it['id'])
+        target = work / 'unpack' / DATA_NAME if plan['switch'] else Path(plan['target'])
+        if plan.get('repair') and not target.is_dir():
+            return              # a repair that found nothing to replace: the library, and its add-on, are as they were
         got = []
         offset = 0
-        for file in entry['files']:
-            path, ours = self._get_file(it, file, plan, work, control, offset)
-            got.append((path, ours))
-            offset += file['size']
-        self._set(it, 'activating')
-        target = work / 'unpack' / DATA_NAME if plan['switch'] else Path(plan['target'])
-        for path, _ in got:
-            try:
+        try:
+            for file in entry['files']:
+                path, ours = self._get_file(it, file, plan, work, control, offset)
+                got.append((path, ours))
+                offset += file['size']
+            self._set(it, 'activating')
+            for path, _ in got:
                 addon_merge.add(target, path)
-            except addon_merge.Refused as e:
-                raise install.Refused('unpack', f'The documents could not be added: {e}')
+        except (download.Failed, addon_merge.Refused) as e:
+            if not entry.get('local_only'):
+                raise
+            # the documents are optional: a file that is gone or does not match leaves them out, never stops the library or map
+            print(f'setup: {entry["id"]} left out: {getattr(e, "message", e)}', flush=True)
+            it['note'] = f'{entry["title"]} were left out: {getattr(e, "message", e)}'
+            return
         for path, ours in got:
             if ours:
                 os.unlink(path)
@@ -1150,8 +1163,8 @@ def _place_word(entry):
 
 
 def _local_only(plan, f):
-    """Whether this file belongs to a local-only map or address index in the job's plan."""
-    return any(e and e.get('local_only') and f in e['files'] for e in (plan.get('map'), plan.get('addresses')))
+    """Whether this file belongs to a local-only map, address index or add-on in the job's plan."""
+    return any(e and e.get('local_only') and f in e['files'] for e in (plan.get('map'), plan.get('addresses'), *(plan.get('addons') or [])))
 
 
 def _local_missing(entry, sources):
