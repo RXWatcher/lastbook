@@ -3,13 +3,15 @@
 
   derived/buildenv/bin/python tools/build_map_osm.py derived/sources/nl/netherlands-latest.osm.pbf derived/geo-nl/national.sqlite \\
       --box 3.2,50.7,7.3,53.7 --water-polygons derived/sources/nl/water-polygons-split-4326 \\
-      --land-polygons derived/sources/nl/land-polygons-split-4326
+      --land-polygons derived/sources/nl/land-polygons-split-4326 --admin derived/geo-nl/admin.sqlite
 
 Reads: a Geofabrik country extract (https://download.geofabrik.de/europe/netherlands-latest.osm.pbf), and the coastline
 polygons OpenStreetMap publishes (https://osmdata.openstreetmap.de/download/water-polygons-split-4326.zip and
 land-polygons-split-4326.zip). All are OpenStreetMap data, © OpenStreetMap contributors, ODbL 1.0.
 Writes: feat/feat_idx (roads, water, land use, waterways, rail, places, sea as layer 'ocean', land as layer 'island'), poi
 (help points) and meta. Buildings are left out: for the Netherlands they come from Kadaster BAG (tools/build_bag.py).
+With --admin, also a build-only admin.sqlite: municipalities (admin_level 8, with ref:gemeentecode) and provinces (admin_level 4),
+which tools/build_places_nl.py reads. It never ships.
 
 Classes follow the names of Geofabrik's "free" schema, so map.js draws them as it draws tools/build_map.py's output. Dutch help
 points: hospitals with an emergency department (emergency=yes) are 'hospital_seh'; doctors or clinics named huisartsenpost or HAP
@@ -19,13 +21,17 @@ points keep their emergency=* value.
 import argparse, re, sqlite3, sys, time
 from pathlib import Path
 
-from map_schema import ROAD_Z, LANDUSE_KEEP, PLACE_Z, POI_KEEP, simplify, bbox, area_z, create_map_tables, MapWriter
+from map_schema import ROAD_Z, LANDUSE_KEEP, PLACE_Z, POI_KEEP, simplify, bbox, pack, area_z, create_map_tables, MapWriter
 
 LINES = {'waterway': {'river', 'canal', 'stream', 'drain', 'ditch'}, 'railway': {'rail', 'light_rail', 'subway', 'tram'}}
 POI_ALIASES = {('amenity', 'toilets'): 'toilet', ('shop', 'bicycle'): 'bicycle_shop', ('tourism', 'camp_site'): 'camp_site',
                ('leisure', 'park'): None, ('man_made', 'water_tower'): 'water_tower', ('man_made', 'water_works'): 'water_works',
                ('man_made', 'wastewater_plant'): 'wastewater_plant', ('natural', 'spring'): 'spring'}
 HAP = re.compile(r'huisartsenpost|\bHAP\b', re.I)
+# Only objects with one of these keys reach Python: pyosmium drops the rest after storing node locations (most of the file).
+KEYS = ('highway', 'waterway', 'railway', 'natural', 'water', 'landuse', 'leisure', 'boundary', 'place', 'amenity', 'shop',
+        'emergency', 'man_made', 'tourism')
+ADMIN_LEVELS = {'4': 'province', '8': 'municipality'}
 
 
 def classify(tags, kind):
@@ -89,9 +95,17 @@ def overlaps(box, b):
     return box is None or not (b[1] < box[0] or b[0] > box[2] or b[3] < box[1] or b[2] > box[3])
 
 
-def build(pbf, out, box=None, water=None, land=None):
+def admin_db(path):
+    db = sqlite3.connect(path)
+    db.executescript('DROP TABLE IF EXISTS admin; CREATE TABLE admin(kind TEXT, name TEXT, code TEXT, minx REAL, maxx REAL, miny REAL, '
+                     'maxy REAL, geom BLOB);')
+    return db
+
+
+def build(pbf, out, box=None, water=None, land=None, admin=None):
     import osmium
     t0 = time.time()
+    adm = admin_db(admin) if admin else None
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
     tmp = out.with_suffix('.partial')
@@ -164,6 +178,18 @@ def build(pbf, out, box=None, water=None, land=None):
             if not a.tags:
                 return
             tags = dict(a.tags)
+            kind = ADMIN_LEVELS.get(tags.get('admin_level')) if tags.get('boundary') == 'administrative' else None
+            if adm is not None and kind and tags.get('name'):
+                rings = []
+                try:
+                    for outer in a.outer_rings():
+                        rings.append([c for nd in outer for c in (nd.lon, nd.lat)])
+                except osmium.InvalidLocationError:
+                    rings = []
+                if rings:
+                    b = bbox(rings)
+                    adm.execute('INSERT INTO admin VALUES (?,?,?,?,?,?,?,?)', (kind, tags['name'], tags.get('ref:gemeentecode'), *b,
+                                                                             pack([simplify(r, 0.0002) for r in rings])))
             if not classify(tags, 'area'):
                 return
             parts = []
@@ -178,7 +204,10 @@ def build(pbf, out, box=None, water=None, land=None):
             if parts:
                 handle(tags, 'area', parts)
 
-    Handler().apply_file(str(pbf), locations=True)
+    Handler().apply_file(str(pbf), locations=True, filters=[osmium.filter.KeyFilter(*KEYS)])
+    if adm is not None:
+        adm.commit()
+        adm.close()
     for folder, layer in ((water, 'ocean'), (land, 'island')):
         if folder:
             n = coast(w, Path(folder), layer, box)
@@ -219,9 +248,10 @@ def main():
     ap.add_argument('--box', help='W,S,E,N: leave out what lies wholly outside')
     ap.add_argument('--water-polygons', help='folder with water_polygons.shp (sea)')
     ap.add_argument('--land-polygons', help='folder with land_polygons.shp (land drawn over the sea)')
+    ap.add_argument('--admin', help='also write municipalities and provinces to this build-only database')
     a = ap.parse_args()
     box = [float(v) for v in a.box.split(',')] if a.box else None
-    build(a.pbf, a.out, box, a.water_polygons, a.land_polygons)
+    build(a.pbf, a.out, box, a.water_polygons, a.land_polygons, a.admin)
 
 
 if __name__ == '__main__':

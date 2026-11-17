@@ -23,7 +23,7 @@
      "status": "Shown at every zoom level"
     },
     {
-     "label": "Place names (OpenStreetMap, Kadaster BAG woonplaatsen, Kadaster BRK municipalities and provinces)",
+     "label": "Place names (OpenStreetMap places, municipalities and provinces; Kadaster BAG towns and villages)",
      "status": "Used by \"Find an address, postcode or town\""
     },
     {

@@ -100,6 +100,22 @@ def pack(parts):
     return a.tobytes()
 
 
+def unpack(blob):
+    """pack() read back: a list of parts, each a flat [x, y, ...] list in degrees."""
+    a = array('i')
+    a.frombytes(blob)
+    parts, i = [], 1
+    for _ in range(a[0]):
+        n = a[i]; i += 1
+        x = y = 0
+        flat = []
+        for _ in range(n):
+            x += a[i]; y += a[i + 1]; i += 2
+            flat += [x / Q, y / Q]
+        parts.append(flat)
+    return parts
+
+
 def bbox(parts):
     xs = [v for p in parts for v in p[0::2]]
     ys = [v for p in parts for v in p[1::2]]
