@@ -126,6 +126,18 @@ class DutchAddresses(unittest.TestCase):
         self.assertEqual(us[0]['detail'], 'Washington, DC, 20500')
         self.assertEqual(nl[0]['name'], 'Damrak 1')
 
+    def test_dutch_miss_skips_us_table(self):
+        """A Dutch address that is not found goes to the place finder, never to the US address indexes."""
+        import server
+        make_us_index(self.geo / 'addresses' / 'DC.sqlite')
+        with patch.object(server, 'HERE', self.data), patch.object(server, 'PLACEDB', self.data / 'none.sqlite'), \
+                patch.object(server.address_search, 'find_addresses', side_effect=AssertionError('US table searched')):
+            self.assertEqual(server.places('1012 ZZ 99'), [])
+
+    def test_town_before_postcode(self):
+        self.assertEqual([x['name'] for x in self.find('Lange Voorhout 34 Den Haag, 2514 EE')], ['Lange Voorhout 34'])
+        self.assertEqual([x['name'] for x in self.find('Damrak 1 Amsterdam 1012 LG')][0], 'Damrak 1')
+
     def test_fallback_to_places(self):
         import server
         place_db = self.data / 'places.sqlite'

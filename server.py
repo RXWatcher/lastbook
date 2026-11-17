@@ -1410,7 +1410,7 @@ def places(q, limit=20, near=None):
             hits = address_nl.find(q, dutch, limit=min(limit, 8), near=near)
             if hits:
                 return hits
-            us_address = us_address and bool(address_search.indexes(geo, 'us'))   # no Dutch address: look for a place instead
+            us_address = False      # no such Dutch address: look for a place, never in the US address indexes
     if us_address:
         return address_search.find_addresses(q, HERE / 'derived' / 'geo', limit=min(limit, 8), near=near)
     if not PLACEDB.exists():
@@ -1562,10 +1562,10 @@ US_REGION = {'id': None, 'name': None, 'kind': None, 'units': 'imperial', 'attri
              'search_hint': 'Find an address, town or ZIP', 'place_hint': 'Try a town, county or 5-digit ZIP.', 'data_as_of': None}
 
 
-def region_info():
+def region_info(r=None):
     """The installed detailed map's region (engine/regions.json): its name, units, credits and search words for the Map screen. A
-    library with no regional map (or a US one) gets the US wording it always had."""
-    r = regions.installed_region(HERE)
+    library with no regional map (or a US one) gets the US wording it always had. r: the region, when the caller has read it."""
+    r = r or regions.installed_region(HERE)
     if not r:
         return dict(US_REGION)
     info = {**US_REGION, **{k: r[k] for k in ('id', 'name', 'kind', 'units', 'attribution', 'search_hint', 'place_hint')}}
@@ -1666,7 +1666,7 @@ def map_info():
     region = regions.installed_region(HERE)
     if region and region.get('datasets'):
         geo = [dict(d) for d in region['datasets']]
-    return {**extra, 'region': region_info(), 'meta': meta, 'datasets': geo, 'national': {k: v for k, v in national_status().items() if k not in ('source', 'database')}, 'version': data_version(), 'aerial_detail': detail, 'aerial_rev': rev, 'terrain_circle': tdetail}
+    return {**extra, 'region': region_info(region), 'meta': meta, 'datasets': geo, 'national': {k: v for k, v in national_status().items() if k not in ('source', 'database')}, 'version': data_version(), 'aerial_detail': detail, 'aerial_rev': rev, 'terrain_circle': tdetail}
 
 
 def pack_datasets(have):

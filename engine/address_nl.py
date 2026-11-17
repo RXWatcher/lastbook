@@ -26,7 +26,8 @@ STREET_FIRST = re.compile(
     r'^\s*(?P<street>(?:\d+e\s+)?[^\d,]*[a-z][^\d,]*?)\s+(?P<num>\d+)'
     r'(?P<suffix>(?:\s*-\s*|\s*)[a-z0-9]{1,4}(?:-[a-z0-9]{1,4})?(?=[\s,]|$))?'
     r'(?:\s*,?\s*(?P<pc>\d{4})\s*(?P<pcl>[a-z]{2})(?=[\s,]|$))?'
-    r'(?:\s*,?\s*(?P<city>[^\d,][^\d,]*))?\s*$', re.I)
+    r'(?:\s*,?\s*(?P<city>[^\d,][^\d,]*))?'
+    r'(?:\s*,?\s*(?P<pc2>\d{4})\s*(?P<pcl2>[a-z]{2}))?\s*$', re.I)       # the town may come before the postcode, too
 
 
 def normalize(text):
@@ -59,7 +60,8 @@ def _candidates(query):
     street = normalize(m['street'])
     if not street:
         return []
-    first = {'postcode': (m['pc'] + m['pcl']).upper() if m['pc'] else '', 'number': int(m['num']), 'suffix': _suffix(m['suffix']),
+    postcode = (m['pc'] + m['pcl']).upper() if m['pc'] else (m['pc2'] + m['pcl2']).upper() if m['pc2'] else ''
+    first = {'postcode': postcode, 'number': int(m['num']), 'suffix': _suffix(m['suffix']),
              'street': street, 'city': _city(m['city'] or '')}
     out = [first]
     if first['suffix'] and m['suffix'].strip(' -').isalpha():
