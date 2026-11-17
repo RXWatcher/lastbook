@@ -17,7 +17,7 @@ A map set lives in the data folder. `map-set.json` at its top lists the files an
 |---|---|---|---|
 | `derived/geo/national.sqlite` | `feat`, `feat_idx`, `poi`, `meta` | Roads, water and land shapes, and the place pins | `server.py` (`national_mapdb`) |
 | `derived/geo/map.sqlite` | the same four | The original detailed street map of Southern California; it had no rows in the state map checked | `server.py` (`mapdb`) |
-| `derived/geo/water.sqlite` | `resource`, `spatial`, `feat`, `feat_idx` | Dams, reservoirs, lakes and ponds | `server.py` |
+| `derived/geo/water.sqlite` | `resource`, `spatial`, `feat`, `feat_idx` | Dams, reservoirs, lakes and ponds; in the Netherlands also dike lines and flood outlines (`feat` layers `dike` and `flood`, served as their own tiles by `/api/map/flood/<z>/<x>/<y>`) | `server.py` |
 | `derived/geo/crops.sqlite` | `resource`, `spatial`, `tile` | Orchards, vineyards and berries | `server.py` |
 | `derived/geo/terrain.sqlite` | `tile` | Elevation tiles for relief, contours and the 3D view | `server.py` |
 | `derived/geo/buildings.sqlite` | `bldg` | Building outlines | `server.py` |
@@ -70,6 +70,7 @@ so ask before adding many.
 |---|---|---|
 | `map.sqlite` | `tools/build_map.py`, then `tools/build_coast.py` for the ocean | An OpenStreetMap regional extract (ODbL) |
 | `water.sqlite` | `tools/build_water.py` (`nid`, then `nhd`) | USACE National Inventory of Dams, USGS National Hydrography Dataset |
+| `water.sqlite` (Netherlands flood rows) | `tools/build_floods_nl.py`, run after `tools/build_water.py` | Rijkswaterstaat NBPW primary flood defences (public domain), the provinces' ROR flood risk maps with water depth (CC0) |
 | `crops.sqlite` | `tools/build_crops.py` | USDA Cropland Data Layer |
 | `terrain.sqlite` | `tools/build_terrain.py` | USGS 3DEP elevation |
 | `buildings.sqlite` | `tools/build_buildings.py`, `tools/build_osm_heights.py` | Microsoft building footprints (ODbL), OpenStreetMap heights |

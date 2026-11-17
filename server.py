@@ -15,6 +15,7 @@ requests, and adds a few read-only endpoints:
   /api/transcript/<video id>  timed transcript cues
   /api/shelves, /api/shelf/<id>   browse the whole collection by plain-language shelf
   /api/map/tile/<z>/<x>/<y>   offline street map vector tile (SoCal OpenStreetMap)
+  /api/map/flood/<z>/<x>/<y>?s=t100,dike   flood outlines and dike lines (Netherlands) as a vector tile
   /api/map/near?lat=&lon=     nearest help points (hospital, pharmacy, water, fire station...)
   /api/places?q=              place finder (ZIP codes, towns, named places)
 
@@ -871,13 +872,6 @@ def _map_tile(z, x, y, version):
         return b'{"error":"map not built"}'
     lon0, lat0, lon1, lat1 = tile_bounds(z, x, y)
     pad = (lon1 - lon0) * 0.04
-    n = 2 ** z
-
-    def proj(lon, lat):
-        px = ((lon + 180) / 360 * n - x) * EXT
-        s = math.sin(math.radians(max(-85, min(85, lat))))
-        py = ((0.5 - math.log((1 + s) / (1 - s)) / (4 * math.pi)) * n - y) * EXT
-        return px, py
     rows = db.execute('SELECT f.layer,f.cls,f.name,f.geom FROM feat_idx i JOIN feat f ON f.id=i.id '
                       'WHERE i.maxx>=? AND i.minx<=? AND i.maxy>=? AND i.miny<=? AND i.minz<=? ORDER BY f.id',
                       (lon0 - pad, lon1 + pad, lat0 - pad, lat1 + pad, z)).fetchall()
@@ -896,15 +890,35 @@ def _map_tile(z, x, y, version):
         wdb = getattr(_tls, 'water', None) or sqlite3.connect(ro_uri(WATERDB), uri=True, check_same_thread=False)
         _tls.water = wdb
         rows += wdb.execute('SELECT f.layer,f.cls,f.name,f.geom FROM feat_idx i JOIN feat f ON f.id=i.id '
-                            'WHERE i.maxx>=? AND i.minx<=? AND i.maxy>=? AND i.miny<=? AND i.minz<=?',
-                            (lon0 - pad, lon1 + pad, lat0 - pad, lat1 + pad, z)).fetchall()
+                            "WHERE i.maxx>=? AND i.minx<=? AND i.maxy>=? AND i.miny<=? AND i.minz<=? AND f.layer NOT IN ('flood','dike')",
+                            (lon0 - pad, lon1 + pad, lat0 - pad, lat1 + pad, z)).fetchall()   # flood outlines have their own tiles (flood_tile)
+    layers = _tile_layers(rows, z, x, y)
+    if z >= 15:
+        ms_buildings(layers, z, x, y, tol_for(z), version)
+    # Service symbols are not baked into tiles; /api/map/pins serves them clustered and filterable.
+    return json.dumps({'z': z, 'layers': layers}, separators=(',', ':')).encode()
+
+
+def tol_for(z):
+    return 2.0 if z <= 6 else 1.2 if z <= 9 else 0.7 if z < 15 else 0.4
+
+
+def _tile_layers(rows, z, x, y):
+    """Feature rows (layer, cls, name, geom) as tile layers: {layer: [[cls, name, [flat x,y parts in 0..EXT]]]} for tile z/x/y."""
+    n = 2 ** z
+
+    def proj(lon, lat):
+        px = ((lon + 180) / 360 * n - x) * EXT
+        s = math.sin(math.radians(max(-85, min(85, lat))))
+        py = ((0.5 - math.log((1 + s) / (1 - s)) / (4 * math.pi)) * n - y) * EXT
+        return px, py
     layers = {}
-    tol = 2.0 if z <= 6 else 1.2 if z <= 9 else 0.7 if z < 15 else 0.4
+    tol = tol_for(z)
     for layer, cls, name, geom in rows:
         if layer == 'bldg' and z < 15:
             continue
         parts = unpack(geom)
-        polygon = layer in ('water', 'wet', 'land', 'beach', 'bldg', 'ocean', 'island')
+        polygon = layer in ('water', 'wet', 'land', 'beach', 'bldg', 'ocean', 'island', 'flood')
         geo = []
         for p in parts:
             pts = [proj(lo, la) for lo, la in p]
@@ -925,10 +939,42 @@ def _map_tile(z, x, y, version):
                 geo.append(q)
         if geo:
             layers.setdefault(layer, []).append([cls, name, geo])
-    if z >= 15:
-        ms_buildings(layers, z, x, y, tol, version)
-    # Service symbols are not baked into tiles; /api/map/pins serves them clustered and filterable.
-    return json.dumps({'z': z, 'layers': layers}, separators=(',', ':')).encode()
+    return layers
+
+
+FLOOD_SCENARIOS = ('t10', 't100', 't1000', 't10000')
+
+
+def flood_tile(z, x, y, want):
+    """Flood outlines and dike lines (tools/build_floods_nl.py, rows of water.sqlite) for tile z/x/y, as JSON bytes. want: a comma list
+    of 'dike' and scenario names (t10, t100, t1000, t10000); anything else is ignored. They have their own tiles so the base tile
+    stays the same size and the map can switch them without refetching it."""
+    toks = sorted({w for w in want.split(',') if w == 'dike' or w in FLOOD_SCENARIOS})
+    return _flood_tile(z, x, y, ','.join(toks), data_version())
+
+
+@functools.lru_cache(maxsize=512)
+def _flood_tile(z, x, y, want, version):
+    empty = json.dumps({'z': z, 'layers': {}}, separators=(',', ':')).encode()
+    if not want or not WATERDB.exists():
+        return empty
+    cached = getattr(_tls, 'floods', None)
+    if cached is None or cached[0] != WATERDB:
+        cached = _tls.floods = (WATERDB, sqlite3.connect(ro_uri(WATERDB), uri=True, check_same_thread=False))
+    toks = want.split(',')
+    scn = [w for w in toks if w != 'dike']
+    lon0, lat0, lon1, lat1 = tile_bounds(z, x, y)
+    pad = (lon1 - lon0) * 0.04
+    cond = ["(f.layer='dike')"] if 'dike' in toks else []
+    if scn:
+        cond.append("(f.layer='flood' AND substr(f.cls,1,instr(f.cls,'-')-1) IN (%s))" % ','.join('?' * len(scn)))
+    try:
+        rows = cached[1].execute('SELECT f.layer,f.cls,f.name,f.geom FROM feat_idx i JOIN feat f ON f.id=i.id '
+                                 'WHERE i.maxx>=? AND i.minx<=? AND i.maxy>=? AND i.miny<=? AND i.minz<=? AND (' + ' OR '.join(cond) + ') ORDER BY f.id',
+                                 (lon0 - pad, lon1 + pad, lat0 - pad, lat1 + pad, z, *scn)).fetchall()
+    except sqlite3.Error:
+        return empty
+    return json.dumps({'z': z, 'layers': _tile_layers(rows, z, x, y)}, separators=(',', ':')).encode()
 
 
 BLDGDB = HERE / 'derived/geo/buildings.sqlite'
@@ -1549,6 +1595,9 @@ def map_contents():
                 db.close()
     for path in (LIB / 'geography/resources/atlas.sqlite', WATERDB, CROPDB):
         kinds |= set(_distinct(path, 'SELECT DISTINCT kind FROM resource'))
+    # flood scenarios and dikes (tools/build_floods_nl.py) are shapes, not pins: named flood_t100 ... and dike so the map offers their layers
+    kinds |= set(_distinct(WATERDB, "SELECT DISTINCT CASE layer WHEN 'dike' THEN 'dike' ELSE 'flood_' || substr(cls, 1, instr(cls, '-') - 1) END "
+                                    "FROM feat WHERE origin='floods-nl' AND layer IN ('flood', 'dike')"))
     contours = any(r for r in _distinct(TERRAINDB, 'SELECT 1 FROM tile WHERE z>=11 LIMIT 1'))
     bounds = None
     if boxes:
@@ -2118,6 +2167,12 @@ class Handler(library.Handler):
                 self.send_header('Cache-Control', 'max-age=86400'); self.end_headers()
                 self.wfile.write(data)
                 return
+            m = re.fullmatch(r'/api/map/flood/(\d+)/(\d+)/(\d+)', path)
+            if m:
+                z, x, y = map(int, m.groups())
+                if not 3 <= z <= 18:
+                    return self.send_json({'z': z, 'layers': {}})
+                return self.send_json(flood_tile(z, x, y, qs.get('s', '')), cache='max-age=86400' if 'v' in qs else 'max-age=60')
             m = re.fullmatch(r'/api/map/tile/(\d+)/(\d+)/(\d+)', path)
             if m:
                 z, x, y = map(int, m.groups())

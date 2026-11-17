@@ -40,6 +40,10 @@
      "status": "Crop parcels as declared by farmers"
     },
     {
+     "label": "Flood defences (Rijkswaterstaat NBPW) and flood scenarios with water depth (provinces' flood risk maps, EU Floods Directive)",
+     "status": "Layers \u2192 Flood risk, from zoom 8. Scenarios, not a forecast"
+    },
+    {
      "label": "Addresses (Kadaster BAG)",
      "status": "Postcode and house number, or street and number"
     }

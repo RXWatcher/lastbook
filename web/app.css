@@ -816,6 +816,7 @@ body.map-maxed{overflow:hidden}
 .presets button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:999px;padding:5px 11px;font:600 13px var(--font);cursor:pointer}.presets button:hover{border-color:var(--ink3)}
 .layers fieldset{border:0;margin:8px 0 0;padding:0}.layers legend{font:700 12px var(--font);text-transform:uppercase;letter-spacing:.04em;color:var(--ink3);padding:4px 2px}
 .layers label{display:flex;align-items:center;gap:9px;padding:6px 4px;border-radius:8px;cursor:pointer;font-size:15px}.layers label:hover{background:var(--sunk)}
+.layers .floodkey{display:flex;flex-wrap:wrap;gap:3px 10px;margin:4px 4px 0;font-size:12px;color:var(--ink2)}.layers .floodkey i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:4px;vertical-align:-2px}
 .layers label input{width:18px;height:18px;margin:0;accent-color:#1b5e20}.layers label span{flex:1}.layers label small{color:var(--ink3);font-variant-numeric:tabular-nums}
 .mapctl{z-index:4}.mapctl button{width:46px;height:46px;font-size:20px}
 .mapctl #map-us{font-size:14px;letter-spacing:.02em}
