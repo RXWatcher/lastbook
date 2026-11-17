@@ -10,8 +10,9 @@ PDOK's Web Coverage Service https://service.pdok.nl/rws/ahn/wcs/v1_0 (Rijkswater
 WGS84 (EPSG:4326) at 1 arc-second, the grid of the USGS cells the terrain builder was written for: the map's terrain tiles stop
 at zoom 12, about 24 m a pixel at 52° N, so finer data would not show. The full 0.5 m sheets (about 455 GB) are not needed.
 Writes: <out>/n53e005/n53e005.tif and so on: float32, 3600 x 3600, top-left tie point and 1/3600° pixel scale, -9999 where
-there is no data. Buildings and water are holes in a terrain model; holes up to about a kilometre across are filled from the
-ground around them, so a polder does not show false sea-level pits. Larger water stays empty and draws at sea level (0 m).
+there is no data. Buildings and water are holes in a terrain model. A hole with ground on both sides within 64 cells (about
+1.2 km across, 2 km down) is filled from the ground around it, so a polder does not show false sea-level pits. Open water and
+anything wider stays empty and draws at sea level (0 m); heights are never spread out over the sea.
 A cell already written is kept, so an interrupted run resumes.
 """
 import argparse, io, math, sys, time, urllib.error, urllib.request
@@ -36,13 +37,27 @@ def cell_name(top, left):
     return f'n{top:02d}e{left:03d}'
 
 
+def _enclosed(valid, reach, axis):
+    """Cells with data within `reach` cells on both sides along one axis."""
+    v = np.moveaxis(valid, axis, -1)
+    n = v.shape[-1]
+    idx = np.broadcast_to(np.arange(n), v.shape)
+    prev = np.maximum.accumulate(np.where(v, idx, -10 ** 9), axis=-1)
+    nxt = np.minimum.accumulate(np.where(v, idx, 10 ** 9)[..., ::-1], axis=-1)[..., ::-1]
+    return np.moveaxis((idx - prev <= reach) & (nxt - idx <= reach), -1, axis)
+
+
 def fill_gaps(h, passes=64):
-    """NaN cells next to data take the mean of their valid neighbours (8-connected), repeated up to `passes` times."""
+    """Holes in the ground model take the mean of their valid neighbours (8-connected), repeated up to `passes` times, but only
+    holes with ground on both sides within `passes` cells, across or down: buildings, canals, ditches. Open water reaching the
+    cell's edge and holes wider than twice that stay empty, and draw at sea level."""
     h = h.astype(np.float32, copy=True)
+    gap = np.isnan(h)
+    if not gap.any() or gap.all():
+        return h
+    may = gap & (_enclosed(~gap, passes, 0) | _enclosed(~gap, passes, 1))
     for _ in range(passes):
         gap = np.isnan(h)
-        if not gap.any() or gap.all():
-            break
         v = np.where(gap, 0, h)
         n = (~gap).astype(np.float32)
         vp, np_ = np.pad(v, 1), np.pad(n, 1)
@@ -55,7 +70,7 @@ def fill_gaps(h, passes=64):
                     continue
                 total += vp[dy:dy + rows, dx:dx + cols]
                 count += np_[dy:dy + rows, dx:dx + cols]
-        fill = gap & (count > 0)
+        fill = gap & may & (count > 0)
         if not fill.any():
             break
         h[fill] = total[fill] / count[fill]
