@@ -188,5 +188,10 @@ Regions outside the US (added 2026-11-17, `engine/regions.py`):
   computer (`found[]`, or `use`), checked against the manifest's size and SHA-256 as any other file, and never downloads it.
   `start` with such a map and no file answers `{code: "local_only"}` with a sentence naming the file and the folder to put it
   in; a local-only address index without its file is skipped unless it was asked for by name.
+- `addons` (a manifest list like `maps`) names add-ons: documents that go into the library itself (`engine/setup/addons.py`), each with
+  `with_map`, the map they go with. When `start` installs that map (or a pack that carries it), an add-on whose file is on this
+  computer, and which the library does not have yet, becomes a job item of `kind: "addon"` after the map: its file is checked,
+  then merged into the library being made (or the open one). A missing local-only add-on is skipped. `current.add_ons` lists the
+  add-ons the open library has.
 - `state.found_folder` is the folder setup looks in for such files (as well as the open library), so the screen can say where to
   put them.

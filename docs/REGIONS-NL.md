@@ -259,9 +259,10 @@ library, so a US library, or a Dutch library without the add-on, does not show t
 checks that each page a guide cites contains the words its note relies on. The publisher "Government of the Netherlands" is labelled
 "Government guidance" like the other government sources.
 
-**Setup does not install it.** Setup installs a library, a map and an address index, and replaces the whole library when it upgrades.
-The add-on is one extra command (README, "The Dutch guides and documents"), and has to be added again after an upgrade. Teaching setup
-a fourth kind of download is left undone.
+**Setup installs it with the map.** The manifest lists the add-on under `addons`, with `with_map: "NL"` and `local_only`
+(`packaging/region_maps.py build --addon`). When setup installs the Netherlands map, in a first run, a map change or a library
+upgrade, and the add-on's zip is on the computer, setup checks it against the manifest and adds it to the library it makes, with
+`engine/setup/addons.py`. Without the file, the map installs as usual. `packaging/pack_merge.py` does the same by hand.
 
 **Not covered.** Dutch-language material (Rode Kruis, Nederland Veilig, the Dutch booklet), and the pages for fuel, empty shelves, card
 payments, wildfire, cyber, earthquake and others on the Denk vooruit risk list; they could be added to `webpages.txt` the same way.
@@ -432,7 +433,7 @@ Setup's map choice lists the Netherlands under "Countries", above the 52 US stat
 - **Flood scenarios per breach.** LIWO's scenarios for one dike breach at a time (depth, speed, arrival time) have no open bulk
   download that was found; the ROR maps above are the open substitute.
 - **Hosting.** Lastbook's site does not host the Netherlands zips; their manifest entries are marked `local_only`. This
-  fork publishes the zips of this build as a GitHub release ([nl-map-2026-11-17-v2](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17-v2); the first release, nl-map-2026-11-17, had no floods, heights, secondary addresses or Wikidata GP posts),
+  fork publishes the zips of this build as a GitHub release ([nl-map-2026-11-17-v3](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17-v3); the first release, nl-map-2026-11-17, had no floods, heights, secondary addresses or Wikidata GP posts),
   for people who want to install them without building.
 - **Caribbean Netherlands**, as its own region.
 

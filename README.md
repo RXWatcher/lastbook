@@ -49,7 +49,7 @@ source. The map files can be downloaded ready-made from this fork's release (the
 
 #### The quick way: download the map files
 
-The release [nl-map-2026-11-17-v2](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17-v2) holds the files built on 17 November 2026
+The release [nl-map-2026-11-17-v3](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17-v3) holds the files built on 17 November 2026
 (OpenStreetMap data as of 16 November 2026, BAG of 1 November and 8 November 2026, 3D BAG of 3 September 2025, BRP 2025). It has
 the map zip (0.9 GB), the address zip (0.4 GB), the manifest entries that let setup check them (`NL-entries.json`), the Dutch
 documents add-on (`Lastbook-Addon-NL-Preparedness.zip`, 0.1 MB) and `SHA256SUMS`.
@@ -60,7 +60,7 @@ python3.11 -m venv .venv
 .venv/bin/pip install -r packaging/requirements_macos.txt     # Windows: packaging/requirements_app.txt; Linux: packaging/linux/requirements_linux.txt
 mkdir -p nl && cd nl
 for f in Lastbook-Map-NL.zip Lastbook-Addresses-NL.zip NL-entries.json Lastbook-Addon-NL-Preparedness.zip SHA256SUMS; do
-  curl -fLO https://github.com/RXWatcher/lastbook/releases/download/nl-map-2026-11-17-v2/$f
+  curl -fLO https://github.com/RXWatcher/lastbook/releases/download/nl-map-2026-11-17-v3/$f
 done
 shasum -a 256 -c SHA256SUMS
 cd ..
@@ -68,12 +68,8 @@ cd ..
 .venv/bin/python packaging/region_maps.py dev-manifest
 ```
 
-Then do steps 6 and 7 below: move the two zips to the folder setup looks in, and run Lastbook. After setup has made your
-library, close Lastbook once and add the Dutch documents and guides (see [The Dutch guides and documents](#the-dutch-guides-and-documents)):
-
-```bash
-python3 packaging/pack_merge.py add --data "$HOME/Library/Application Support/Lastbook/LastbookData" nl/Lastbook-Addon-NL-Preparedness.zip
-```
+Then do steps 6 and 7 below: move the three zips (map, addresses, documents) to the folder setup looks in, and run Lastbook.
+Setup installs all three together when you choose the Netherlands.
 
 #### The full way: build the map files
 
@@ -142,16 +138,18 @@ into `water.sqlite` after the named lakes, and the secondary addresses are added
 **5. Package them and tell setup about them:**
 
 ```bash
-.venv/bin/python packaging/region_maps.py build NL --src derived/geo-nl   # checks the set, writes the two zips below
+.venv/bin/python packaging/region_maps.py build NL --src derived/geo-nl \
+    --addon derived/packs/state-zips/Lastbook-Addon-NL-Preparedness.zip    # checks the set, writes the zips below, lists the add-on
 .venv/bin/python packaging/region_maps.py manifest NL                     # lists them in derived/release/manifest-v1.json
 .venv/bin/python packaging/region_maps.py dev-manifest                    # the setup manifest the app reads when run from source
 ```
 
-This writes `derived/packs/state-zips/Lastbook-Map-NL.zip` (about 0.9 GB) and `Lastbook-Addresses-NL.zip` (about 0.4 GB). The
-manifest holds their size and SHA-256, so setup accepts exactly the files you built; rebuild the manifest whenever you rebuild
+This writes `derived/packs/state-zips/Lastbook-Map-NL.zip` (about 0.9 GB) and `Lastbook-Addresses-NL.zip` (about 0.4 GB), and
+lists the documents add-on (step 4's last line) with them. The manifest holds their size and SHA-256, so setup accepts exactly the
+files you built; rebuild the manifest whenever you rebuild
 the zips. `dev-manifest` also fetches upstream's manifest once, so the library packs still download from lastbook.org.
 
-**6. Put the two zips where setup looks for files:**
+**6. Put the three zips (map, addresses, documents) where setup looks for files:**
 
 | System | Folder |
 |---|---|
@@ -194,16 +192,23 @@ numbers: a guide's page number is the page of the original PDF file (for the nin
 download and only the standard library:
 
 ```bash
-python3 tools/build_nl_documents.py derived/nl-guides/addon --zip derived/nl-guides/Lastbook-Addon-NL-Preparedness.zip
-# close Lastbook, then put the documents into your library (the folder that holds library-data/; on a Mac by default
-# ~/Library/Application Support/Lastbook/LastbookData):
-python3 packaging/pack_merge.py add --data "$HOME/Library/Application Support/Lastbook/LastbookData" derived/nl-guides/Lastbook-Addon-NL-Preparedness.zip
+python3 tools/build_nl_documents.py derived/nl-guides/addon --zip derived/packs/state-zips/Lastbook-Addon-NL-Preparedness.zip
 ```
 
-Open Lastbook and the four guides are in the list; the documents are searchable and open page by page like any PDF. To take them out
-again: `python3 packaging/pack_merge.py remove --data <LastbookData> nl-preparedness`. Setting up a different library (an upgrade) replaces
-the library, so run the `add` again afterwards. `pack_merge.py` also writes the add-on's files into the library's `pack-manifest.tsv`, so
-setup's repair does not call them damaged.
+**Setup installs it.** When `Lastbook-Addon-NL-Preparedness.zip` is in the folder setup looks in, next to the map zips, setup adds
+it whenever it installs the Netherlands map, including after a library upgrade, and the setup screen says so. It is checked against
+the manifest like the map, and never downloaded. Without the file, the map installs as usual and the guides stay hidden.
+
+To add or take out the documents by hand (Lastbook closed; the library is the folder that holds `library-data/`, on a Mac by default
+`~/Library/Application Support/Lastbook/LastbookData`):
+
+```bash
+python3 packaging/pack_merge.py add --data "$HOME/Library/Application Support/Lastbook/LastbookData" derived/packs/state-zips/Lastbook-Addon-NL-Preparedness.zip
+python3 packaging/pack_merge.py remove --data "$HOME/Library/Application Support/Lastbook/LastbookData" nl-preparedness
+```
+
+Open Lastbook and the four guides are in the list; the documents are searchable and open page by page like any PDF. The add-on's
+files are also written into the library's `pack-manifest.tsv`, so setup's repair does not call them damaged.
 
 ### What is not there yet
 
@@ -211,7 +216,7 @@ setup's repair does not call them damaged.
   dates from 2018 and 2019. RIVM counts about 101 today, so a few points may be closed or moved, or doubled. RIVM's own list
   has no licence that allows reuse. Call 112 or your own GP's number. Emergency departments are as tagged in OpenStreetMap
   (75, RIVM counts 79), and a few hospitals with one are not marked.
-- **The Dutch guides are an extra step**, and cover only the government's own English material: the 72-hour kit and plan, warnings and
+- **The Dutch guides cover only the government's own English material**: the 72-hour kit and plan, warnings and
   112, floods and leaving home, long power and water cuts. Upstream's other guides (water, first aid, food, shelter) are US-based but
   mostly general. The documents are text-only (the government's pictures are not CC0), and the radio frequency table and phone numbers are
   as the government published them on 17 November 2026.
@@ -233,8 +238,8 @@ setup's repair does not call them damaged.
   computer (`docs/SETUP-API.md`).
 - `tools/build_map_osm.py`, `build_hap_nl.py`, `build_bag.py`, `build_bag_extra.py`, `fetch_3dbag.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`, `build_floods_nl.py`: the Netherlands
   builders. `tools/map_schema.py` holds the street-map format they share with `tools/build_map.py`.
-- `tools/build_nl_documents.py`, `packaging/pack_merge.py`, `content/nl-documents/`, `content/topics/nl-*.json`: the Dutch documents add-on, the tool
-  that puts an add-on into a library, the text it is built from, and the four guides. A guide with `needs_doc` shows only where that document is (`content/SCHEMA.md`).
+- `tools/build_nl_documents.py`, `engine/setup/addons.py` (with `packaging/pack_merge.py` as its command line), `content/nl-documents/`, `content/topics/nl-*.json`: the Dutch documents add-on, the code
+  that puts an add-on into a library (setup uses it when a manifest's `addons` entry goes with the map being installed), the text it is built from, and the four guides. A guide with `needs_doc` shows only where that document is (`content/SCHEMA.md`).
 - `packaging/region_maps.py`: assembles, checks and zips a region's map set. `packaging/map_sets.py` holds the map-set
   contract it shares with `packaging/state_maps.py`.
 - Design and implementation plan: `docs/superpowers/specs/2026-11-17-netherlands-region-design.md` and
@@ -248,7 +253,7 @@ setup's repair does not call them damaged.
 | macOS (Apple Silicon, macOS 14 or later) | 1.1.11 | Live on lastbook.org, signed and notarized |
 | Windows (64-bit, Windows 10 or later) | 1.1.11 | Live on lastbook.org, Authenticode signed |
 | Linux (Ubuntu 24.04 or 26.04 LTS, x86_64) | 1.1.11 | Ubuntu packages; installation instructions below |
-| Netherlands map (this fork) | source | Run from source with the map files from release [nl-map-2026-11-17-v2](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17-v2) or built yourself; see [Lastbook for the Netherlands](#lastbook-for-the-netherlands) |
+| Netherlands map (this fork) | source | Run from source with the map files from release [nl-map-2026-11-17-v3](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17-v3) or built yourself; see [Lastbook for the Netherlands](#lastbook-for-the-netherlands) |
 
 ## iPad (development preview, source only)
 
