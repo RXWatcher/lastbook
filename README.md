@@ -25,7 +25,7 @@ instead of a US state and you get:
 | Streets, land use, water, rail, place names, coast | OpenStreetMap (Geofabrik `netherlands-latest.osm.pbf`, osmdata coastline polygons) | ODbL 1.0 | 5,563,556 map features |
 | Help points: hospitals (marked when they have an emergency department, SEH), out-of-hours GP posts (huisartsenposten), defibrillators (AED), emergency assembly points, pharmacies, fire, police, drinking water, shelters, supermarkets, fuel | OpenStreetMap | ODbL 1.0 | 77,924 points, including 4,363 AEDs and 75 SEH hospitals |
 | Building outlines | Kadaster BAG (`bag-light.gpkg`, PDOK) | CC0 1.0 | 11,297,049 buildings |
-| Address search: postcode and house number (`1012 LG 1`), street first (`Damrak 1 Amsterdam`), a postcode alone (`3511 AA`), any house-number addition (`12A`, `12-2`, `2-III`, `2 hs`) | Kadaster BAG | CC0 1.0 | 9,706,576 addresses |
+| Address search: postcode and house number (`1012 LG 1`), street first (`Damrak 1 Amsterdam`), a postcode alone (`3511 AA`), any house-number addition (`12A`, `12-2`, `2-III`, `2 hs`), and secondary addresses (a corner building's side-street address) | Kadaster BAG | CC0 1.0 | 9,723,320 addresses |
 | Elevation, relief, contours in metres, heights below sea level | AHN4 terrain model (Rijkswaterstaat, PDOK WCS), at 1 arc-second | CC0 1.0 | the whole country; the Zuidplaspolder reads −4.5 m |
 | Orchards, vineyards, soft fruit, asparagus and rhubarb | RVO BRP Gewaspercelen 2025 | CC0 1.0 | 6,013 map cells from 16,207 parcels |
 | Find a town, municipality or province (Den Haag and Den Bosch work as well as BAG's 's-Gravenhage and 's-Hertogenbosch) | BAG towns and villages; OpenStreetMap municipalities and provinces | CC0 1.0; ODbL 1.0 | 67,160 names |
@@ -94,6 +94,7 @@ curl -fLO https://download.geofabrik.de/europe/netherlands-latest.osm.pbf       
 curl -fLO https://osmdata.openstreetmap.de/download/water-polygons-split-4326.zip                  # sea, 0.9 GB
 curl -fLO https://osmdata.openstreetmap.de/download/land-polygons-split-4326.zip                   # land, 0.8 GB
 curl -fLO https://service.pdok.nl/kadaster/bag/atom/downloads/bag-light.gpkg                       # BAG, 7.8 GB
+curl -fLO https://service.pdok.nl/kadaster/bag/atom/downloads/lvbag-extract-nl.zip                 # full BAG with secondary addresses, 3.7 GB
 curl -fLO https://service.pdok.nl/rvo/gewaspercelen/atom/downloads/brpgewaspercelen_definitief_2025.gpkg   # BRP, 2.9 GB
 unzip -q water-polygons-split-4326.zip && unzip -q land-polygons-split-4326.zip
 cd ../../..
@@ -107,6 +108,7 @@ $B tools/build_map_osm.py $S/netherlands-latest.osm.pbf $G/national.sqlite --box
    --water-polygons $S/water-polygons-split-4326 --land-polygons $S/land-polygons-split-4326 --admin $G/admin.sqlite   # ~12 min
 $B tools/build_water.py --geo $G osm
 $B tools/build_bag.py $S/bag-light.gpkg $G --box $BOX                                                                    # ~6 min
+$B tools/build_bag_extra.py $S/lvbag-extract-nl.zip $G/addresses/NL.sqlite $G/addresses/NL-full.sqlite && mv $G/addresses/NL-full.sqlite $G/addresses/NL.sqlite   # ~6 min
 $B tools/build_places_nl.py $G/national.sqlite $S/bag-light.gpkg $G/admin.sqlite $G/places.sqlite
 $B tools/fetch_ahn.py $S/ahn --box $BOX
 $B tools/build_terrain.py --src $S/ahn --out $G/terrain.sqlite --bbox $BOX --workers 6 \
@@ -158,7 +160,6 @@ Netherlands only from the files.
 ### What is not there yet
 
 - **Out-of-hours GP posts are thin.** OpenStreetMap has about 40 of the roughly 115. Call 112 or your own GP's number.
-- **Secondary addresses** (BAG nevenadressen) are not in the BAG file used, so they cannot be searched.
 - **No flood layers** yet: primary flood defences, flood-risk maps. They need a new kind of map layer.
 - **No Dutch guides or documents** yet. The guides are upstream's, US-based but mostly general (water, first aid, food,
   shelter). The government's English "Denk vooruit" booklet and emergency kit list are the obvious next addition.
@@ -174,7 +175,7 @@ Netherlands only from the files.
 - `engine/address_nl.py`: Dutch address search, used by `server.places` when a Netherlands index is installed.
 - Setup accepts region ids (`NL`, `DE-BY`), and manifest entries marked `local_only` that are installed only from a file on the
   computer (`docs/SETUP-API.md`).
-- `tools/build_map_osm.py`, `build_bag.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`: the Netherlands
+- `tools/build_map_osm.py`, `build_bag.py`, `build_bag_extra.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`: the Netherlands
   builders. `tools/map_schema.py` holds the street-map format they share with `tools/build_map.py`.
 - `packaging/region_maps.py`: assembles, checks and zips a region's map set. `packaging/map_sets.py` holds the map-set
   contract it shares with `packaging/state_maps.py`.
@@ -268,7 +269,7 @@ The setup contract, including state maps, is in [docs/SETUP-API.md](docs/SETUP-A
 | `content/` | The curated guides (`topics/*.json`) and what curators looked for and did not find (`gaps.json`). Format: `content/SCHEMA.md`. |
 | `packaging/` | App builds (macOS, Windows and Linux), the Windows installer and its front (`setup_stub/`), signing helper (`sign_windows.ps1`), icons (`icon/`), pack and state-map builders, the region map-set packager (`region_maps.py`, `map_sets.py`), release manifest, TLS roots tools, package scans, and `packaging/llm/` (the local AI runner). |
 | `derived/packs/pack-spec.json` | What goes into each download pack (Small, Medium, All and add-ons) and each state map. Everything else under `derived/` is generated and not kept here. |
-| `tools/` | Builders for the offline map, addresses and place finder (US; and for the Netherlands `build_map_osm.py`, `build_bag.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`, with their tests in `tools/tests/`), plus curator helpers (`libq.py`, `validate_topics.py`). |
+| `tools/` | Builders for the offline map, addresses and place finder (US; and for the Netherlands `build_map_osm.py`, `build_bag.py`, `build_bag_extra.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`, with their tests in `tools/tests/`), plus curator helpers (`libq.py`, `validate_topics.py`). |
 | `website/`, `website-next/` | The earlier website and the current static lastbook.org site, respectively. |
 | `docs/` | The setup contract (`SETUP-API.md`), how the offline map is put together (`MAPS.md`), the country proposals (`REGIONS*.md`; `REGIONS-NL.md` is built), notes on the library server version (`LIBRARY-SERVER.md`), and the Netherlands design and plan (`superpowers/`). |
 

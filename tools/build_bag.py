@@ -8,7 +8,7 @@ Reads: PDOK's BAG GeoPackage without history, https://service.pdok.nl/kadaster/b
   pand(geom POLYGON, status)                                         building outlines
   verblijfsobject(geom POINT, status, openbare_ruimte_naam, huisnummer, huisletter, toevoeging, postcode, woonplaats_naam)
   ligplaats, standplaats(geom POLYGON, same address columns)         houseboat and mobile-home pitches
-Each address object carries its main address (hoofdadres) only; this file holds no secondary addresses.
+Each address object carries its main address (hoofdadres) only; tools/build_bag_extra.py adds the secondary ones.
 Writes:
   <out>/buildings.sqlite      bldg(x, y, part, n, data) as tools/build_buildings.py writes it (z14 buckets, zlib int32 records),
                               with empty bldg_socal and bldg_osm (the map reads them) and meta. No heights.

@@ -68,7 +68,7 @@ Twelve provinces would add nothing a person needs.
 | Sea and coast (`national.sqlite`, layers `ocean`, `island`) | OSM coastline, closed westward | OSM water and land polygons, split, EPSG:4326 (osmdata.openstreetmap.de) | OpenStreetMap contributors | ODbL 1.0 | opened |
 | Help points (`poi`) | OSM | OSM, with Dutch classes (see Help points) | OpenStreetMap contributors | ODbL 1.0 | opened |
 | Buildings (`buildings.sqlite`) | Microsoft footprints | BAG `pand`, from PDOK `bag-light.gpkg` (7.8 GB) | Kadaster | CC0 1.0 | opened |
-| Addresses (`addresses/NL.sqlite`) | Overture | BAG `verblijfsobject`, `ligplaats`, `standplaats` from the same file | Kadaster | CC0 1.0 | opened |
+| Addresses (`addresses/NL.sqlite`) | Overture | BAG `verblijfsobject`, `ligplaats`, `standplaats` from the same file; secondary addresses from PDOK `lvbag-extract-nl.zip` (3.66 GB) | Kadaster | CC0 1.0 | opened |
 | Elevation (`terrain.sqlite`) | USGS 3DEP 1 arc-second | AHN4 terrain model (`dtm_05m`) from PDOK's WCS, asked for at 1 arc-second in EPSG:4326 | Rijkswaterstaat / Het Waterschapshuis | CC0 1.0 (stated in the service's capabilities) | opened |
 | Crops (`crops.sqlite`) | USDA Cropland Data Layer | BRP Gewaspercelen 2025, definitive (2.9 GB GeoPackage) | RVO | CC0 1.0 | opened |
 | Water (`water.sqlite`) | NID, NHD | named lakes from the OSM street map (`tools/build_water.py --geo derived/geo-nl osm`) | OpenStreetMap contributors | ODbL 1.0 | opened |
@@ -90,8 +90,16 @@ Notes:
   - The current PDOK service (api.pdok.nl/kadaster/bestuurlijkegebieden) is **CC BY 4.0** (opened).
   - OSM carries the current boundaries with each municipality's CBS code, under ODbL, which the map already credits.
   - BAG names a town's municipality by its code (`bronhouder_identificatie`), which matches OSM's `ref:gemeentecode`.
-- **BAG holds main addresses only** in `bag-light.gpkg`: each address object carries its `hoofdadres`. Secondary addresses
-  (`nevenadressen`) are not in this file and are not searchable.
+- **Secondary addresses come from the full BAG extract.** `bag-light.gpkg` carries each object's main address
+  (`hoofdadres`) only. A corner building often has a second address in the side street (a `nevenadres`).
+  - `tools/build_bag_extra.py` reads PDOK's `lvbag-extract-nl.zip` (3.66 GB of XML with history, CC0 1.0, from
+    https://service.pdok.nl/kadaster/bag/atom/bag.xml, opened), takes the `nevenadres` references of every current
+    dwelling, houseboat pitch and mobile-home pitch that `build_bag.py` keeps, and resolves each to its postcode, number,
+    letter, addition, street and town.
+  - Each is placed at its object's point (a polygon's centre for pitches). It is added to the same index; one whose postcode,
+    number, letter and addition is already there is skipped.
+  - Result: 9,706,576 main addresses plus 16,744 secondary ones (20 duplicates skipped), 9,723,320 in all.
+    Example: `Lange Leidsedwarsstraat 121H Amsterdam` is the side-street address of Prinsengracht 540.
 - **What BAG keeps.**
   - Buildings: those that stand ("Pand in gebruik", "Pand in gebruik (niet ingemeten)", "Verbouwing pand", "Pand buiten
     gebruik", "Sloopvergunning verleend").
@@ -174,6 +182,7 @@ $B tools/build_map_osm.py $S/netherlands-latest.osm.pbf $G/national.sqlite --box
    --water-polygons $S/water-polygons-split-4326 --land-polygons $S/land-polygons-split-4326 --admin $G/admin.sqlite
 $B tools/build_water.py --geo $G osm
 $B tools/build_bag.py $S/bag-light.gpkg $G --box $BOX
+$B tools/build_bag_extra.py $S/lvbag-extract-nl.zip $G/addresses/NL.sqlite $G/addresses/NL-full.sqlite && mv $G/addresses/NL-full.sqlite $G/addresses/NL.sqlite
 $B tools/build_places_nl.py $G/national.sqlite $S/bag-light.gpkg $G/admin.sqlite $G/places.sqlite
 $B tools/fetch_ahn.py $S/ahn --box $BOX
 $B tools/build_terrain.py --src $S/ahn --out $G/terrain.sqlite --bbox $BOX --source-label "AHN4 DTM (Rijkswaterstaat, CC0 1.0), 1 arc-second"
@@ -205,6 +214,7 @@ Built on 17 November 2026 on an Apple Silicon Mac (10 cores, 32 GB) from the sou
 | `build_map_osm.py` | 5,563,556 map features; 77,924 points; 16 sea and 171 land polygons; 346 municipalities and 12 provinces | 12 min |
 | `build_water.py --geo` | 4,750 named lakes and reservoirs | under 1 min |
 | `build_bag.py` | 9,706,576 addresses; 11,297,049 buildings | 5.5 min |
+| `build_bag_extra.py` | 16,744 secondary addresses added (20 duplicates skipped): 9,723,320 in all; `NL.sqlite` 1,236,094,976 bytes | 5.5 min (8 jobs) |
 | `build_places_nl.py` | 67,160 names; 2,505 BAG towns and villages, all with a province, all but 2 with a municipality | 3 s |
 | `fetch_ahn.py` | 15 of 20 one-degree cells have AHN data; 221 MB | 2 min |
 | `build_terrain.py` | 1,689 tiles, zoom 4 to 12 | 5 s |
