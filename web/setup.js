@@ -112,7 +112,8 @@
     if (p.id !== 'medium' || !maps().length) return text;
     // The manifest describes the archive's bundled map. Setup replaces it with the chosen state map.
     const state = selectedState();
-    return text.replace(/\ba detailed map of California\b/, () => 'a detailed map of ' + (state ? mapName(state) : 'your state'));
+    const inText = id => (mapById(id) || {}).title_in_text || mapName(id);   // "the Netherlands", where a country needs it
+    return text.replace(/\ba detailed map of California\b/, () => 'a detailed map of ' + (state ? inText(state) : 'your state'));
   }
   const packDl = p => p.download_bytes || (p.files || []).reduce((n, f) => n + (f.size || 0), 0);
   const SEP = WIN ? '\\' : '/', DATA = 'LastbookData';

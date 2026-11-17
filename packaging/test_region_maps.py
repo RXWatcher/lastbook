@@ -132,6 +132,7 @@ class RegionMaps(unittest.TestCase):
         self.assertIsNotNone(m)
         self.assertEqual((m['maps'][0]['local_only'], m['maps'][0]['kind'], m['maps'][0]['available']), (True, 'country', True))
         self.assertEqual(m['address_indexes'][0]['local_only'], True)
+        self.assertEqual(m['maps'][0]['title_in_text'], 'the Netherlands')
         self.assertEqual(maps['files'][0]['url'], 'https://downloads.lastbook.org/maps/Lastbook-Map-NL.zip')
 
     def test_merge_into_manifest(self):

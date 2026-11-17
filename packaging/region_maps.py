@@ -3,6 +3,7 @@ with its address index and listed for setup as a file found on this computer (do
 
   .venv/bin/python packaging/region_maps.py build NL --src derived/geo-nl      # assemble, check, zip
   .venv/bin/python packaging/region_maps.py manifest NL                        # list both zips in derived/release/manifest-v1.json
+  .venv/bin/python packaging/region_maps.py manifest NL --entries NL-entries.json   # the same, for zips downloaded from a release
   .venv/bin/python packaging/region_maps.py dev-manifest                       # a setup manifest for running from source
 
 A US state map is cut from the national files (packaging/build_packs.py, state_maps.py). A region outside the US is built whole
@@ -172,7 +173,8 @@ def package(code, dest, addresses, zips=ZIPS):
     db.close()
     installed = sum((Path(dest) / rel).stat().st_size for rel in ALLOWED)
     kind = region['kind']
-    maps = {'id': code, 'title': region['name'], 'kind': kind, 'includes': INCLUDES, 'local_only': True, 'available': True,
+    maps = {'id': code, 'title': region['name'], 'title_in_text': region.get('name_in_text') or region['name'], 'kind': kind,
+            'includes': INCLUDES, 'local_only': True, 'available': True,
             'installed_bytes': installed,
             'files': [{'name': mz.name, 'url': f'{BASE}/maps/{mz.name}', 'size': mz.stat().st_size, 'sha256': sha_file(mz), 'kind': 'zip'}]}
     addr = {'id': code, 'title': region['name'], 'kind': f'{kind}-addresses', 'local_only': True, 'available': True,
@@ -219,6 +221,7 @@ def main():
     b.add_argument('--src', required=True, help="the region's builders' folder, e.g. derived/geo-nl")
     m = sub.add_parser('manifest')
     m.add_argument('code')
+    m.add_argument('--entries', help="the entries file from a build or a release (default: this build's derived/packs/maps/<code>-entries.json)")
     sub.add_parser('dev-manifest')
     a = ap.parse_args()
     if a.action == 'build':
@@ -233,7 +236,10 @@ def main():
         for e in entries:
             log(e['files'][0]['name'], f"{e['files'][0]['size']:,} bytes", e['files'][0]['sha256'])
     elif a.action == 'manifest':
-        list_in_manifest(MANIFEST, *json.loads((OUT / f'{a.code}-entries.json').read_text(encoding='utf-8')))
+        entries = json.loads(Path(a.entries or OUT / f'{a.code}-entries.json').read_text(encoding='utf-8'))
+        if [e['id'] for e in entries] != [a.code, a.code]:
+            sys.exit(f'{a.entries} does not hold the {a.code} map and address entries')
+        list_in_manifest(MANIFEST, *entries)
         log('listed', a.code, 'in', MANIFEST)
     else:
         dev_manifest()

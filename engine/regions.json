@@ -4,6 +4,7 @@
   {
    "id": "NL",
    "name": "Netherlands",
+   "name_in_text": "the Netherlands",
    "kind": "country",
    "country": "NL",
    "address_style": "nl",

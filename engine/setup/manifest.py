@@ -83,6 +83,8 @@ def validate(m, allowed=None):
             if available and not _int(x.get('installed_bytes')):
                 return None
             entries.append({'id': x['id'], 'title': str(x.get('title') or x['id']), 'kind': str(x.get('kind') or 'state'),
+                         # the name in a sentence ("a detailed map of the Netherlands"); a US state's title already reads right
+                         'title_in_text': str(x.get('title_in_text') or x.get('title') or x['id']),
                          'includes': str(x.get('includes') or ''),
                          # offered only as a file already on this computer (a region Lastbook's site does not host): never downloaded
                          'local_only': x.get('local_only') is True,
