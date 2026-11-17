@@ -108,7 +108,7 @@ def catalog():
 TRUST = [  # (pattern on publisher+collection, label shown to people, ranking weight)
     (r'World Health|WHO\b|ICRC|IFRC|Red Cross|Médecins|MSF|UNICEF|Sphere|St John Ambulance|CAWST', 'International health & humanitarian guidance', 1.5),
     (r'Hesperian|Where There Is No|Where Women|Book for Midwives|Community Guide to Environmental|Health Actions|Workers\' Guide', 'Hesperian community health guide', 1.45),
-    (r'FEMA|Ready\.gov|CDC|Centers for Disease|EPA|Environmental Protection|NOAA|National Weather|USDA|Food Safety|National Park|USGS|Department|Agency|U\.S\.|US Army|Army|Navy|Census|NIOSH|OSHA|NASA|FAA|Cal OES|California|County of|City of', 'Government guidance', 1.4),
+    (r'FEMA|Ready\.gov|CDC|Centers for Disease|EPA|Environmental Protection|NOAA|National Weather|USDA|Food Safety|National Park|USGS|Department|Agency|U\.S\.|US Army|Army|Navy|Census|NIOSH|OSHA|NASA|FAA|Cal OES|California|County of|City of|Government of the Netherlands', 'Government guidance', 1.4),
     (r'National Center for Home Food Preservation|Extension|University|UC |College|Agricultural|Food Hero|UWyo', 'University / extension service', 1.35),
     (r'MIT|OpenStax|OpenCourseWare|NIST', 'Course or textbook', 1.1),
     (r'Kiwix|Wikipedia|Wikibooks|Appropedia|MDWiki', 'Community-written encyclopedia', 1.0),
@@ -241,6 +241,9 @@ def topics_resolved():
         return step.get('goto') or step['read'] or not step['had']
 
     for t in topics():
+        # A guide for one country's documents (content/SCHEMA.md "needs_doc") shows only in a library that holds them.
+        if t.get('needs_doc') and t['needs_doc'] not in catalog()['by_id']:
+            continue
         t = dict(t)
         t['gaps'] = gaps.get(t['id'], {})
         for k in ('prepare', 'learn'):

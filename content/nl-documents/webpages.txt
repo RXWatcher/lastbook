@@ -1,0 +1,185 @@
+@@ page 1 | web page "NL-Alert"
+# NL-Alert
+You will only receive an NL-Alert if there is an incident near you. You will then receive a message on your mobile phone. The NL-Alert tells you what is going on, what to do and where to find more information. Anyone in an area surrounding an incident can receive an NL-Alert. Even if you are passing through or happen to be visiting the area.
+
+NL-Alert works even if the mobile phone network is overloaded. Receiving an NL-Alert? Read the message immediately, take action and help others.
+
+## NL-Alert test message
+Every first Monday in June and December, you will receive a test message around noon. That test message comes at the same time as the monthly test of the siren. So you can experience what it is like to receive an NL-Alert and check whether your mobile phone receives NL-Alerts.
+
+## More information
+You can find more information about NL-Alert on the website www.nl-alert.nl.
+
+Source page: https://english.denkvooruit.nl/prepare-yourself/this-is-how-youll-be-alerted/nl-alert
+@@ page 2 | web page "The siren"
+# The siren
+Is it not the first Monday of the month and the siren goes off? Then there is danger and the siren goes off to warn you. Then you need to get inside as quickly as possible, close windows, doors and other openings and follow the news on television, radio or the internet.
+
+Source page: https://english.denkvooruit.nl/prepare-yourself/this-is-how-youll-be-alerted/the-siren
+@@ page 3 | web page "Radio"
+# Radio
+When there is danger in the Netherlands, the government informs you of the developments of the incident or crisis and the actions you should take in various ways. The government communicates through websites, social media or the (regional) public broadcasters on radio and television.
+
+If the power goes down and an Internet connection is no longer possible, the regional public broadcaster can still continue to broadcast via radio. Therefore, we also recommend to have a radio in the emergency kit in the house.
+
+This could be a battery-operated radio or a digital radio (DAB+). If you have a digital radio, check that it also has FM frequencies. Then you can be sure that during an emergency situation, you will stay informed and be notified by the authorities. Even if there is no power or Internet connection.
+
+## Radio station
+Every region has its own radio station and FM frequency. Check the overview for the frequency in your region. You can already tune your radio to the right frequency. A DAB radio automatically receives the regional broadcaster of the region.
+
+The overview, with the FM transmitter locations and frequencies, is on the next page.
+
+Source page: https://english.denkvooruit.nl/prepare-yourself/this-is-how-youll-be-alerted/radio
+@@ page 4 | web page "Radio", the frequency table
+# Radio frequencies: broadcaster, FM transmitter location, frequency in MHz
+• (No broadcaster is named in the source table for the first two rows.) Jirnsum 92.2; Smilde 92.5
+• Radio Noord: Groningen 97.5
+• Radio Noord (named again in the source table): Smilde 90.8; Emmen 99.3
+• Radio Oost: Hengelo 89.4; Markelo 95.6; Markelo 97.9; Zwollekerspel 99.4
+• Radio Gelderland: Arnhem 88.9; Ugchelen 103.5; Ruurlo 90.4; Megen 89.1; Zaltbommel 99.6
+• Radio M Utrecht: Lopik 93.1; Rhenen 97.9
+• Omroep Flevoland: Lelystad 89.8
+• NH Radio: Amsterdam 88.9; Alkmaar 88.7; Hilversum 88.7; Wieringermeer 93.9
+• Omroep West: Den Haag 89.3; Leiden 88.0
+• Radio Rijnmond: Rotterdam 93.4
+• Omroep Zeeland: Goes 87.9; Vlissingen 98.4
+• Omroep Brabant: West-Brabant 91.0; Midden-Brabant 91.9; Noordoost-Brabant 95.8; Zuidoost-Brabant 87.6
+• L1 Radio (Limburg): Roermond 100.3; Emmaberg 95.3
+
+Source page: https://english.denkvooruit.nl/prepare-yourself/this-is-how-youll-be-alerted/radio
+@@ page 5 | web page "Your safety region"
+# Your safety region
+The Netherlands is divided into 25 safety regions. Each safety region is dedicated to the safety of the residents and visitors in that area. For example, the safety region is responsible for organising a fire service. The safety region also makes arrangements for dealing with disasters and crises. Good cooperation between emergency services, public authorities, businesses and citizens is important in such situations.
+
+The Netherlands is divided into 25 safety regions. These are listed below. Don't know which safety region you live in? Check the map at rijksoverheid.nl (information in Dutch).
+• Amsterdam-Amstelland
+• Brabant-Noord
+• Brabant-Zuidoost
+• Drenthe
+• Flevoland
+• Friesland
+• Gelderland-Midden
+• Gelderland-Zuid
+• Gooi en Vechtstreek
+• Groningen
+• Haaglanden
+• Hollands Midden
+• IJsselland
+• Kennemerland
+• Limburg-Noord
+• Midden- en West-Brabant
+• Noord- en Oost-Gelderland
+• Noord-Holland Noord
+• Rotterdam-Rijnmond
+• Twente
+• Utrecht
+• Zaanstreek-Waterland
+• Zeeland
+• Zuid-Holland Zuid
+• Zuid-Limburg
+
+Source page: https://english.denkvooruit.nl/prepare-yourself/this-is-how-youll-be-alerted/your-safety-region
+@@ page 6 | web page "Flooding"
+# Flooding
+Much of the Netherlands is below sea level. Dunes, dams, dykes and other flood defences keep out water from the sea, large lakes and rivers. However, despite constant efforts, things can still go wrong.
+
+Floods are dangerous. Houses flood and people and animals are at risk. In winter and spring, there is a greater chance of high water on Dutch rivers and along the coast. There is more rainwater then in other seasons. A flood usually does not come unexpectedly.
+
+## Think ahead
+• Put together an emergency kit. You can also take the emergency kit with you if you have to leave your home.
+• Check the website overstroomik.nl (information in Dutch only) to see if your house is at risk from a flood.
+• Up-to-date information can be found on the website from your security region or via your local radio or TV station.
+• Think in advance which place in your house will stay dry the longest.
+• Think about to whom you can go to if you have to leave your home.
+• Discuss with neighbours how you can help each other.
+• Keep warm blankets and towels in a dry place in order to keep yourself dry and warm.
+• Check escape routes so that you know how to leave your house if you can no longer leave through the front door. For example a skylight or ladder.
+• Know where the main gas valve is, so you can turn it off if there is a risk of flooding.
+• Make sure you have a clean bucket, empty bottles or a jerry can at home. You can use this if emergency drinking water is distributed.
+• Also think about the animals in and around your home. Can they come (with you) to a dry place?
+
+## Government actions
+• To continue protecting the Netherlands against flooding, flood defences such as dams and dikes must be in good order. That is why the government regularly checks whether flood defences meet the legal standards. If this is not the case, the flood defences are reinforced or modified.
+• The government reserves space in the Netherlands to retain excess water. For instance in parks, recreational areas, nature reserves or polders.
+• The government also cooperates with neighbouring countries to prevent flooding of all cross-border waters such as rivers.
+
+Source page: https://english.denkvooruit.nl/risks/overview/flooding
+@@ page 7 | web page "No power"
+# No power
+When there is a power cut, it can cause major problems. Telephone exchanges can break down, mobile phones may become overloaded and could go down within hours, central heating systems may stop working or the pressure in water pipes may drop.
+
+Everyone uses many appliances that only run on electricity, like a refrigerator. Power can go down for long and short periods, for example, due to network overload, a cyber-attack or other disaster and even extreme weather.
+
+## Think ahead
+• Check in your own household and surroundings what depends on electricity.
+• Think in advance what the problems might be if the power cut lasts for a long time.
+• Put together an emergency kit. For example drinking water, food with a long shelf life, a torch, a battery-powered radio and a charged power bank so you can charge your mobile phone.
+
+## Is there a power cut?
+• Do not call 112, as it is not an acute emergency. However, you can call the national power failure number: 0800-9009.
+• Do you still have Internet on your phone or tablet? Then check www.government.nl or the website of your municipality or security region for up-to-date information.
+• Listen to your regional broadcaster on your battery-powered radio or use the car radio. Check the list of all radio stations here.
+• Unplug power sockets. This will prevent damage to appliances the moment the power comes back on.
+• Is it cold? Keep windows and doors closed to keep the warmth inside and heat and occupy especially the smallest spaces in your home.
+• Drop in on people who might need help. See if you can help with practical items or a power bank to charge a phone.
+
+## Government actions
+• All European grid operators (in the Netherlands this is TenneT) have jointly drawn up rules to ensure the reliability of the electricity supply.
+• In case of prolonged power cuts, emergency provisions are made by the government.
+• There is a National Electricity Crisis Plan (information in Dutch only) so that government parties and companies know what to do if there is a major power failure.
+
+Source page: https://english.denkvooruit.nl/risks/overview/no-power
+@@ page 8 | web page "Drinking water"
+# Drinking water
+We think clean drinking water is the most natural thing in the world. The failure of drinking water supply systems can cause considerable inconvenience. In people's homes, in hospitals and at companies.
+
+There can be various reasons why there is no (clean) drinking water. Such as a break in a water pipe or works. But a digital incident or cyber-attack may also potentially affect the supply of drinking water.
+
+## Think ahead
+• Make sure you have bottled spring water in your home for at least 72 hours.
+• Allow for 3 litres per person per day.
+• Also make sure you have enough water for animals in and around your home.
+• Store these bottles in a cool and dark place.
+• You can keep tap water in a clean bottle in the fridge for a maximum of two to three days.
+• Make sure you have a clean bucket, empty bottles or a jerry can at home from where you can tap emergency drinking water at various places in your area (3 litres per person per day).
+
+## No water from the tap?
+• First check whether the main tap is open or closed. This is usually located in the meter cupboard or else in the crawl space of the house, near the water meter.
+• Check with neighbours whether they have no water either.
+• The website www.waterstoring.nl (information in Dutch only) contains an up-to-date overview of malfunctions and answers to frequently asked questions. Here you can also report a malfunction yourself.
+
+## Government actions
+The government and water companies have emergency plans ready.
+• If no drinking water comes out of the tap for more than 24 hours, water companies supply emergency drinking water to customers.
+• This is done with mobile water tanks with taps at various locations.
+• Up-to-date information can be found on www.government.nl, on the website of your drinking water company and security region, or via the local radio or TV station.
+• If tap water does not meet quality standards, you will receive an NL-alert advising you to first boil the tap water for 3 minutes.
+• Drinking water companies must take security measures so that the supply of (clean) drinking water is not at risk in the event of a digital disruption.
+
+Source page: https://english.denkvooruit.nl/risks/overview/drinking-water
+@@ page 9 | web page "Extreme weather"
+# Extreme weather
+Extreme cold or heat, rainfall, wind gusts, severe thunderstorms, snow or black ice. In the Netherlands, we increasingly face extreme weather conditions. This is partly due to climate change. The consequences can be major. Trees fall down, roads become slippery and accidents happen.
+
+## Think ahead
+• Keep an eye on the weather forecast. Check www.knmi.nl for warnings.
+• Put together an emergency kit.
+• If you are going somewhere, take a mobile phone and charger with you.
+• Make sure there is always a blanket, a warm coat, an umbrella and a bottle of water in your car.
+• Your house should also be well protected from extreme weather like wind and rain. Make sure no items can come loose on or near your home.
+• If it is within your budget, there are also several options for cooling your house, visit www.milieucentraal.nl (information in Dutch only).
+• Keep animals in mind. Make sure there is a place where they are well sheltered or take them with you. Make sure they have enough food and drink for 72 hours.
+
+## During extreme weather
+• During a code red (weather alert), stay at home if you can.
+• Are you at home? Then stay indoors, which is safest. And let people and animals take shelter.
+• If you do have to go out, bring enough food and drink, a blanket, extra clothes and a mobile phone with charger. Let others know where you are going and via which route.
+• Only call 112 in the event of a life-threatening situation. If there is no emergency, but you need the fire brigade for storm damage or flooding, call 0900-0904.
+• Report damage to your insurance only after extreme weather.
+
+## Government actions
+• KNMI warns of extreme weather with a colour code. There are three colour codes: yellow, orange and red (weather alarm).
+• When a weather alarm is issued, not only the weather forecast is considered, but also the expected impact on road and rail traffic and public safety.
+• If necessary, KNMI issues warnings for hazardous weather per province.
+
+Source page: https://english.denkvooruit.nl/risks/overview/extreme-weather

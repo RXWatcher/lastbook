@@ -1,0 +1,153 @@
+{
+ "id": "nl-flood",
+ "mode": "now",
+ "needs_doc": "nl-denkvooruit-pages",
+ "title": "Netherlands: flood, storm, or having to leave home",
+ "short": "The Dutch government's flood and extreme-weather pages, and leaving home with your kit",
+ "intro": "What the Dutch government's pages say to think about before a flood or severe storm, what to do in a red weather warning, and what to have ready if you have to leave your home. Shown only in a library that holds the Netherlands documents.",
+ "keywords": [
+  "netherlands",
+  "dutch",
+  "flood",
+  "flooding",
+  "overstroming",
+  "overstroomik",
+  "dyke",
+  "dike",
+  "polder",
+  "high water",
+  "storm",
+  "code red",
+  "weather alarm",
+  "knmi",
+  "evacuate",
+  "evacuation",
+  "leave home",
+  "escape route",
+  "gas valve",
+  "skylight"
+ ],
+ "choices": [
+  {
+   "id": "before",
+   "label": "Floods could reach my area: what should I do ahead of time?",
+   "hint": "Dry places, escape routes, the gas valve, neighbours, animals",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 6,
+     "label": "Flooding: think ahead",
+     "note": "Check overstroomik.nl, pick the place that stays dry longest, check escape routes, know the main gas valve, keep blankets dry, plan for animals and neighbours."
+    },
+    {
+     "doc": "nl-denkvooruit-kit",
+     "page": 1,
+     "label": "The emergency kit you can take with you",
+     "note": "The one-page kit list; the flooding page says to take the kit with you if you have to leave."
+    }
+   ]
+  },
+  {
+   "id": "leave",
+   "label": "I may have to leave my home",
+   "hint": "Where to go, what to take, getting out if the front door is blocked",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 6,
+     "label": "Flooding: where to go, what to take, how to get out",
+     "note": "Think in advance whom you can go to, take the kit, check exits such as a skylight or ladder, and see whether animals can come to a dry place."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 12,
+     "label": "Keep a bag ready for a sudden departure",
+     "note": "Step 5 of the booklet's kit steps: a bag ready to put things in if you suddenly have to leave."
+    },
+    {
+     "doc": "nl-denkvooruit-plan",
+     "page": 2,
+     "label": "Plan form: how to get out safely, and where to meet",
+     "note": "Questions to answer with your household: another way out, an agreed meeting place and address, and two emergency contacts."
+    }
+   ]
+  },
+  {
+   "id": "storm",
+   "label": "A severe storm or a red weather warning",
+   "hint": "Code red, going out, calling for help",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 9,
+     "label": "Extreme weather: during a code red and what to prepare",
+     "note": "Stay at home on code red if you can; if you must go out take food, drink, a blanket and a phone with charger and say where you are going."
+    }
+   ]
+  },
+  {
+   "id": "warned",
+   "label": "How will I be warned, and where do I find news?",
+   "hint": "NL-Alert, the siren, regional radio",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 1,
+     "label": "NL-Alert",
+     "note": "A message to your phone when there is an incident near you; it works when the network is overloaded."
+    },
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 2,
+     "label": "The siren",
+     "note": "Outside the monthly test, go inside, close windows, doors and other openings, and follow the news."
+    },
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 3,
+     "label": "Regional radio when power and internet fail",
+     "note": "A battery or DAB+ radio with FM can still get the regional broadcaster; the frequency list is on the next page."
+    }
+   ]
+  }
+ ],
+ "limits": [
+  {
+   "text": "During a code red weather alarm, stay at home if you can; if you have to go out, tell others where you are going and by which route.",
+   "doc": "nl-denkvooruit-pages",
+   "page": 9
+  },
+  {
+   "text": "Only call 112 for a life-threatening situation. For the fire brigade without an emergency, such as storm damage or flooding, the page gives 0900-0904.",
+   "doc": "nl-denkvooruit-pages",
+   "page": 9
+  },
+  {
+   "text": "The flooding page's check of whether your house is at risk is on overstroomik.nl, a website in Dutch only.",
+   "doc": "nl-denkvooruit-pages",
+   "page": 6
+  }
+ ],
+ "prepare": [
+  {
+   "doc": "nl-denkvooruit-pages",
+   "page": 6,
+   "label": "Flooding: government actions, and the page's own checklist",
+   "note": "Dunes, dams and dykes keep the water out; the page lists what the government does and what households can do."
+  },
+  {
+   "doc": "nl-denkvooruit-booklet",
+   "page": 25,
+   "label": "Floods in Limburg: neighbours who helped",
+   "note": "In the booklet's \"Helping each other\" section, residents gave boots, coffee and towels to people who had to leave their homes."
+  }
+ ],
+ "learn": [
+  {
+   "doc": "nl-denkvooruit-pages",
+   "label": "Denk vooruit web pages: alerts, flooding, power, water, weather (text-only edition)",
+   "note": "Nine pages copied from the government's Denk vooruit site, including flooding and extreme weather."
+  }
+ ],
+ "related": ["nl-alerts", "nl-kit", "nl-outage", "disaster", "shelter"]
+}

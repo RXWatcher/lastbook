@@ -15,6 +15,7 @@ automatically from `catalog.json` — do not copy them into the topic file.
 {
   "id": "water",
   "mode": "now",                     // "now" = urgent need, "learn" = longer-term learning track
+  "needs_doc": "<catalog id>",       // optional: show this guide only in a library that holds this document
   "title": "Get safe drinking water",
   "short": "Treat, store and find water",
   "intro": "One or two plain sentences in your own words. Describe what this section helps with; do not give procedures.",
@@ -49,6 +50,9 @@ automatically from `catalog.json` — do not copy them into the topic file.
 Rules
 - Every `doc` must be a real catalog id (not a `metadata-video-*` id). `page` is the PDF *file* page (1-based) as used by
   `libq.py page`; omit it for html/video/whole-document references. Verify each page by reading it.
+- `needs_doc` is for a guide about one country's documents (the Dutch guides, `nl-*.json`, which cite the Netherlands add-on). The server leaves
+  the guide out of `/api/topics` when that catalog id is not in the library, so a US library never shows it. Items inside any guide whose
+  document is missing are hidden as before. The id must be one of the documents the guide cites.
 - Use a video's own id (`video-...`) for videos. Prefer videos with captions/transcripts and reputable publishers.
 - `label`/`note`/`intro`/`hint` are plain-language descriptions written for a stressed non-expert. They may describe what a
   page contains, but must not add steps, doses, quantities or advice that the page does not say.

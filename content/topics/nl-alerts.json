@@ -1,0 +1,194 @@
+{
+ "id": "nl-alerts",
+ "mode": "now",
+ "needs_doc": "nl-denkvooruit-pages",
+ "title": "Netherlands: warnings, the radio, and when to call 112",
+ "short": "NL-Alert, the siren, the emergency radio station and its frequencies, 112 and other numbers",
+ "intro": "How the Dutch government says it will warn you and keep you informed (NL-Alert, the siren, regional radio), the FM frequency list for the emergency radio, which safety region you live in, and when to call 112 and when to use another number. Shown only in a library that holds the Netherlands documents.",
+ "keywords": [
+  "netherlands",
+  "dutch",
+  "nl-alert",
+  "nl alert",
+  "alert",
+  "siren",
+  "warning",
+  "112",
+  "emergency number",
+  "radio",
+  "fm",
+  "frequency",
+  "dab",
+  "regional broadcaster",
+  "safety region",
+  "veiligheidsregio",
+  "power failure number",
+  "0800-9009",
+  "0900-0904",
+  "public information service",
+  "1400"
+ ],
+ "choices": [
+  {
+   "id": "got-alert",
+   "label": "My phone showed an NL-Alert, or the siren is sounding",
+   "hint": "What each warning means and the first things the pages say to do",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 1,
+     "label": "NL-Alert: what it is and what to do when you get one",
+     "note": "Sent only when there is an incident near you, even to visitors; works when the phone network is overloaded. Read it at once, act and help others."
+    },
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 2,
+     "label": "The siren: what it means outside the monthly test",
+     "note": "Outside the first-Monday test, the siren means danger: go inside, close windows, doors and other openings, and follow the news."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 29,
+     "label": "Booklet: NL-Alert, siren and radio in one place",
+     "note": "The siren steps (go indoors, close windows and doors, switch off or close ventilation, tune in) beside the other ways the government will inform you."
+    }
+   ]
+  },
+  {
+   "id": "radio",
+   "label": "No power or internet: how do I stay informed?",
+   "hint": "A battery radio, FM or DAB+, and the regional station",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 3,
+     "label": "Why a radio belongs in the kit",
+     "note": "Regional public broadcasters can keep broadcasting when power and internet are down; a battery radio or DAB+ radio that also has FM is suggested."
+    },
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 4,
+     "label": "FM frequencies of the regional stations, by transmitter location",
+     "note": "Radio Noord, Oost, Gelderland, M Utrecht, Flevoland, NH, West, Rijnmond, Zeeland, Brabant and L1, with the transmitter town and frequency in MHz."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 29,
+     "label": "Look up your regional frequency and tune the radio to it",
+     "note": "The booklet says to note the frequency, stick it on the radio and tune it in advance."
+    },
+    {
+     "doc": "nl-denkvooruit-plan",
+     "page": 2,
+     "label": "A place on the plan form for the radio frequency",
+     "note": "Question 5: the emergency radio frequency, the regional TV channel and the safety region website."
+    }
+   ]
+  },
+  {
+   "id": "numbers",
+   "label": "Who do I call, and is it a 112 situation?",
+   "hint": "112, the power failure number, the fire brigade without an emergency",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 29,
+     "label": "Important phone numbers: 112, police, Public Information Service",
+     "note": "112 for emergency services, 0900 8844 for the police non-emergency number, 1400 for the Public Information Service."
+    },
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 7,
+     "label": "A power cut is not a 112 call",
+     "note": "Under \"Is there a power cut?\": do not call 112, but call the national power failure number, 0800-9009."
+    },
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 9,
+     "label": "112 only when life is at risk; a number for storm damage and flooding",
+     "note": "In extreme weather, 112 is for life-threatening situations; for the fire brigade without an emergency, such as storm damage or flooding, the page gives 0900-0904."
+    }
+   ]
+  },
+  {
+   "id": "region",
+   "label": "Which safety region am I in, and where do I look for local news?",
+   "hint": "The 25 regions, municipality websites, trusted sources",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-pages",
+     "page": 5,
+     "label": "The 25 safety regions of the Netherlands",
+     "note": "What a safety region does and the list of all 25, from Amsterdam-Amstelland to Zuid-Limburg."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 30,
+     "label": "Reliable sources, and care with WhatsApp and social media",
+     "note": "The government, your municipality's website and your safety region for news; check a message has a source before sharing it."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 27,
+     "label": "How the government will inform the public",
+     "note": "Through NL-Alert, the warning siren and the emergency radio station, with municipalities and safety regions."
+    }
+   ]
+  }
+ ],
+ "limits": [
+  {
+   "text": "A siren at any time other than the monthly test (first Monday of the month, noon) means danger.",
+   "doc": "nl-denkvooruit-pages",
+   "page": 2
+  },
+  {
+   "text": "In a long power cut the 112 number and emergency services are hard to reach because many people are asking for help.",
+   "doc": "nl-denkvooruit-booklet",
+   "page": 8
+  },
+  {
+   "text": "A power cut is not an acute emergency: do not call 112 for it; the national power failure number is 0800-9009.",
+   "doc": "nl-denkvooruit-pages",
+   "page": 7
+  },
+  {
+   "text": "Only call 112 for a life-threatening situation. Without an emergency, for storm damage or flooding that needs the fire brigade, the page names 0900-0904.",
+   "doc": "nl-denkvooruit-pages",
+   "page": 9
+  },
+  {
+   "text": "Be cautious with WhatsApp and social media messages: check that a message gives a source, and do not share unclear ones.",
+   "doc": "nl-denkvooruit-booklet",
+   "page": 30
+  }
+ ],
+ "prepare": [
+  {
+   "doc": "nl-denkvooruit-pages",
+   "page": 1,
+   "label": "NL-Alert test message each June and December",
+   "note": "A test message arrives around noon on the first Monday in June and December, so you can check that your phone receives NL-Alerts."
+  },
+  {
+   "doc": "nl-denkvooruit-booklet",
+   "page": 22,
+   "label": "Keep one phone on and charged so alerts reach you",
+   "note": "Part of the Day 2 power-cut example: a full power bank, low screen brightness, and one phone always on to receive NL-Alerts."
+  },
+  {
+   "doc": "nl-denkvooruit-plan",
+   "page": 3,
+   "label": "Write your important numbers down on the plan",
+   "note": "112, police non-emergency, 1400 and the municipal number, with spaces for your own contacts."
+  }
+ ],
+ "learn": [
+  {
+   "doc": "nl-denkvooruit-pages",
+   "label": "Denk vooruit web pages: alerts, flooding, power, water, weather (text-only edition)",
+   "note": "Nine pages copied from the government's Denk vooruit site, including the radio frequency table and the safety regions."
+  }
+ ],
+ "related": ["nl-kit", "nl-outage", "nl-flood", "comms", "disaster"]
+}

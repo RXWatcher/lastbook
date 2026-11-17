@@ -1,0 +1,60 @@
+{
+ "name": "nl-preparedness",
+ "title": "Netherlands preparedness documents (text-only edition)",
+ "collection": "Netherlands preparedness (Denk vooruit)",
+ "publisher": "Government of the Netherlands (Denk vooruit, NCTV)",
+ "category": "disaster-response",
+ "retrieved_at": "2026-11-17",
+ "about": "Wording of the Dutch government's English preparedness material (Denk vooruit, https://english.denkvooruit.nl, National Coordinator for Counterterrorism and Security), written out page by page into text-only PDFs by tools/build_nl_documents.py. The site's copyright page (https://english.denkvooruit.nl/service/copyright) puts its content under CC0 1.0 unless stated otherwise and excludes photographs, videos, infographics and other images; the PDFs carry pictures and icons, so only their wording is shipped. Each web page also states DCTERMS.rights CC0 1.0 Universal. Not an official edition: the government does not necessarily agree with how it is shown here (Rijksoverheid's copyright page asks reusers to make that clear).",
+ "documents": [
+  {
+   "id": "nl-denkvooruit-booklet",
+   "title": "Prepare for an emergency situation: information booklet (text-only edition)",
+   "file": "booklet.txt",
+   "pages": 32,
+   "source_url": "https://english.denkvooruit.nl/documents/2025/11/25/information-booklet-prepare-for-an-emergency-situation",
+   "pdf_url": "https://english.denkvooruit.nl/site/binaries/site-content/collections/documents/2025/11/25/information-booklet-prepare-for-an-emergency-situation/information-booklet-prepare-for-an-emergency-situation.pdf",
+   "original_sha256": "bd8f0732a2574d8c3adfd7bcf2760652b3e2b987104f598adea9553e6526f903",
+   "published": "2025-11-25",
+   "licence": "CC0 1.0 (wording only; the booklet's pictures are not included)",
+   "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "notes": "The government's 32-page booklet to every household, in English: why prepare, the 72-hour kit list, the emergency plan, a three-day power-outage example, and where to get alerts. Text only: the original's pictures and layout are left out, and its power-outage timeline is written out as a list. Page numbers are those of the original PDF file; the printed numbers are two lower. An unofficial copy: the government does not necessarily agree with how it is shown here."
+  },
+  {
+   "id": "nl-denkvooruit-kit",
+   "title": "Putting together an emergency kit: factsheet (text-only edition)",
+   "file": "kit.txt",
+   "pages": 1,
+   "source_url": "https://english.denkvooruit.nl/documents/2025/11/25/putting-together-an-emergency-kit",
+   "pdf_url": "https://english.denkvooruit.nl/site/binaries/site-content/collections/documents/2025/11/25/putting-together-an-emergency-kit/putting-together-an-emergency-kit.pdf",
+   "original_sha256": "45b20fc2eb60dbec665c5b3e00430389000f9faf57cf1aac25ababef2a10bbe5",
+   "published": "2025-11-25",
+   "licence": "CC0 1.0 (wording only; the factsheet's icons are not included)",
+   "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "notes": "The one-page A4 emergency kit list of the Dutch government's Denk vooruit campaign. The original is an infographic, which the site's copyright page excludes from CC0, so this is its wording only, as the website also gives it as text. An unofficial copy: the government does not necessarily agree with how it is shown here."
+  },
+  {
+   "id": "nl-denkvooruit-plan",
+   "title": "Begin making your emergency plan today: form (text-only edition)",
+   "file": "plan.txt",
+   "pages": 3,
+   "source_url": "https://english.denkvooruit.nl/documents/2026/02/06/begin-making-your-emergency-plan-today",
+   "pdf_url": "https://english.denkvooruit.nl/site/binaries/site-content/collections/documents/2026/02/06/begin-making-your-emergency-plan-today/begin-making-your-emergency-plan-today.pdf",
+   "original_sha256": "8fd579f6bd4840fcee6c464cb5f0a5615b32b651e1a6ceedf2efed468a933057",
+   "published": "2026-02-06",
+   "licence": "CC0 1.0 (wording only; the form's pictures are not included)",
+   "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "notes": "The 3-page emergency plan form: who lives here, who needs help, where to meet, which radio frequency, emergency contacts, important phone numbers. Its questions only: print the original to fill it in, or copy the questions onto paper. An unofficial copy: the government does not necessarily agree with how it is shown here."
+  },
+  {
+   "id": "nl-denkvooruit-pages",
+   "title": "Denk vooruit: alerts, flooding, power cuts, drinking water, extreme weather (web pages, text-only edition)",
+   "file": "webpages.txt",
+   "pages": 9,
+   "source_url": "https://english.denkvooruit.nl/",
+   "licence": "CC0 1.0 (wording only; the web pages' pictures are not included)",
+   "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "notes": "Nine pages of English web pages of the Dutch government's Denk vooruit site, copied on 17 November 2026: NL-Alert, the siren, the emergency radio stations (with FM frequencies), the 25 safety regions, and the risk pages on flooding, power cuts, drinking water and extreme weather. Each page names its own address at its foot. The site may have changed since. An unofficial copy: the government does not necessarily agree with how it is shown here."
+  }
+ ]
+}

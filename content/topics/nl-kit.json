@@ -1,0 +1,191 @@
+{
+ "id": "nl-kit",
+ "mode": "now",
+ "needs_doc": "nl-denkvooruit-booklet",
+ "title": "Netherlands: get ready for 72 hours with an emergency kit and plan",
+ "short": "The Dutch government's 72-hour kit list, emergency plan form and how to talk it over with neighbours",
+ "intro": "What the Dutch government's own preparedness booklet and factsheets say to keep at home for the first three days of an emergency, how to write an emergency plan with the people around you, and how to start the conversation. Shown only in a library that holds the Netherlands documents.",
+ "keywords": [
+  "netherlands",
+  "dutch",
+  "holland",
+  "denk vooruit",
+  "noodpakket",
+  "emergency kit",
+  "72 hours",
+  "three days",
+  "3 days",
+  "go bag",
+  "evacuate",
+  "emergency plan",
+  "noodplan",
+  "household",
+  "neighbours",
+  "neighbors",
+  "cash",
+  "water 3 litres",
+  "battery radio",
+  "power bank",
+  "prepare",
+  "preparedness",
+  "booklet"
+ ],
+ "choices": [
+  {
+   "id": "kit",
+   "label": "I want to put together an emergency kit",
+   "hint": "The government's list for the first 72 hours at home",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-kit",
+     "page": 1,
+     "label": "One-page emergency kit list (Denk vooruit)",
+     "note": "The factsheet in one page: water, food, radio and power bank, light, first aid, blankets, whistle, cash, tools, hygiene items, copies of ID, spare keys."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 13,
+     "label": "The kit list from the booklet, by group",
+     "note": "Water, food, hygiene, keeping warm, light and fire, communication, money and documents, safety, tools and personal items, with the amounts the government names."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 12,
+     "label": "Six steps to build your kit and keep it up to date",
+     "note": "Check what you have, list what is missing, get it, store it where you can reach it, keep a bag ready to leave, and check the kit every six months."
+    }
+   ]
+  },
+  {
+   "id": "plan",
+   "label": "I want to make an emergency plan with my household",
+   "hint": "Who to call, where to meet, how to get out, which radio to tune",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-plan",
+     "page": 1,
+     "label": "Emergency plan form: who lives here, who needs help",
+     "note": "The first page of the government's plan form: the steps, then questions about the people and pets in your household and anyone who needs extra help."
+    },
+    {
+     "doc": "nl-denkvooruit-plan",
+     "page": 2,
+     "label": "Emergency plan form: where to meet, radio, contacts",
+     "note": "Where documents are kept, how to get out if the normal way is blocked, a meeting place, the emergency radio frequency and two emergency contacts."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 14,
+     "label": "Why a plan helps: six situations to think through",
+     "note": "Examples such as a phone that does not work, a lift that is out, medical equipment at home and no internet, each ending in a question to answer in advance."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 15,
+     "label": "Share the plan and keep it with the booklet",
+     "note": "Talk it over with partner, children, parents or neighbours, share a photo or copy with your emergency contacts, and keep it somewhere handy."
+    }
+   ]
+  },
+  {
+   "id": "talk",
+   "label": "I want to talk with neighbours or family about preparing",
+   "hint": "Starting the conversation, helping each other, feeling uneasy about it",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 16,
+     "label": "Step 3: talk with each other and help each other out",
+     "note": "Why talking matters as much as buying things, and steps to take now with neighbours, friends and family."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 18,
+     "label": "Questions to start the conversation",
+     "note": "Ready-made questions: whether someone has prepared, what for, whether they need help and what you could do together."
+    },
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 17,
+     "label": "If preparing makes you anxious or unsure",
+     "note": "Talk about it with people you trust, break the task into small steps, and look for someone you can help."
+    }
+   ]
+  },
+  {
+   "id": "leave",
+   "label": "I may have to leave my home quickly",
+   "hint": "A bag ready by the door",
+   "read": [
+    {
+     "doc": "nl-denkvooruit-booklet",
+     "page": 12,
+     "label": "Keep a bag ready to put things in if you suddenly have to leave",
+     "note": "Step 5 of the kit steps; the kit list in the same booklet is on the next page."
+    },
+    {
+     "doc": "nl-denkvooruit-kit",
+     "page": 1,
+     "label": "Kit factsheet: store it handy, with a bag for leaving",
+     "note": "The closing paragraph names keys, ID and cash as things to put in that bag."
+    }
+   ]
+  }
+ ],
+ "limits": [
+  {
+   "text": "The booklet says that in the first 72 hours people need to manage on their own: there will be a lot of uncertainty and the emergency services cannot be everywhere at once.",
+   "doc": "nl-denkvooruit-booklet",
+   "page": 7
+  },
+  {
+   "text": "An emergency can last longer than 72 hours; the three days are the time the government needs to start organising help and sharing information.",
+   "doc": "nl-denkvooruit-booklet",
+   "page": 8
+  },
+  {
+   "text": "If an emergency lasts a long time and you have run out of food, drink or medicines, the municipality's emergency support office can tell you what to do.",
+   "doc": "nl-denkvooruit-booklet",
+   "page": 27
+  }
+ ],
+ "prepare": [
+  {
+   "doc": "nl-denkvooruit-booklet",
+   "page": 31,
+   "label": "Tips: check the kit and the plan",
+   "note": "Check the kit every six months, replace expired products, add medication or baby food if things change, and keep a paper copy of the plan."
+  },
+  {
+   "doc": "nl-denkvooruit-plan",
+   "page": 3,
+   "label": "Important phone numbers and agreements to fill in",
+   "note": "112, the police non-emergency number and the Public Information Service, with spaces for water, gas, electricity, family doctor and out-of-hours doctor."
+  },
+  {
+   "doc": "nl-denkvooruit-booklet",
+   "page": 27,
+   "label": "Emergency support offices in your neighbourhood",
+   "note": "Municipalities are setting them up; the booklet says to mark the one near you on a paper map and keep it with your kit and plan."
+  },
+  {
+   "doc": "nl-denkvooruit-booklet",
+   "page": 30,
+   "label": "Red Cross first aid app, emergency contacts, a kit for pets",
+   "note": "Resources the booklet lists, including an app that works without internet and a pointer to what pets need."
+  }
+ ],
+ "learn": [
+  {
+   "doc": "nl-denkvooruit-booklet",
+   "label": "Prepare for an emergency situation (the whole booklet, text-only edition)",
+   "note": "The 32-page booklet sent to every household in the Netherlands, in English: threats, 72 hours, kit, plan, talking, a power-cut example, alerts."
+  },
+  {
+   "doc": "nl-denkvooruit-plan",
+   "label": "Begin making your emergency plan today (the whole form, text-only edition)",
+   "note": "All three pages of the plan form's questions; print the original from the Denk vooruit site to fill it in."
+  }
+ ],
+ "related": ["nl-outage", "nl-alerts", "nl-flood", "disaster", "water", "power", "food"]
+}

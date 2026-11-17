@@ -201,6 +201,71 @@ What was opened, and the verdict (17 November 2026):
 No open source was found for the SEH locations either: RIVM's SEH list is on the same VZinfo map and has the same licence gap,
 and the CBS location sets are not open.
 
+## Dutch guides and documents
+
+The library gets the Dutch government's own English preparedness guidance, and four short guides that point at its pages the way the
+other guides point at library pages. Neither is part of the map set: they are a small **add-on** to the library, the mechanism
+`derived/packs/pack-spec.json` already names for extra documents ("addons": the layout of a pack with its own `catalog.json`,
+`search.sqlite` and `summary.json`, and no map set).
+
+**Sources.** Denk vooruit (https://english.denkvooruit.nl), the campaign of the National Coordinator for Counterterrorism and Security
+(NCTV, Ministry of Justice and Security).
+
+| Document (id) | Original | Pages |
+|---|---|---|
+| Information booklet, "Prepare for an emergency situation" (`nl-denkvooruit-booklet`) | PDF of 25 November 2025 | 32 |
+| "Putting together an emergency kit" (`nl-denkvooruit-kit`) | A4 PDF of 25 November 2025 | 1 |
+| "Begin making your emergency plan today" (`nl-denkvooruit-plan`) | PDF form of 6 February 2026 | 3 |
+| Nine web pages (`nl-denkvooruit-pages`): NL-Alert, the siren, radio (and its FM frequency table, a second page), the 25 safety regions, flooding, no power, drinking water, extreme weather | English web pages copied on 17 November 2026 | 9 |
+
+**Licence, and what was read.**
+
+- The copyright page (https://english.denkvooruit.nl/service/copyright, opened) says CC0 applies to the site's content unless stated
+  otherwise, for example by a copyright notice on a document, and that CC0 does not apply to "photographs, videos, infographics or
+  other images". The pages also carry the metadata `DCTERMS.rights: CC0 1.0 Universal` (opened, rights holder Ministry of Justice and
+  Security).
+- Each PDF was downloaded and read. None has a copyright notice or licence text. All three carry images: the booklet has pictures on
+  25 of its 32 pages, the plan form has three, and the kit list is an infographic of icons.
+- **Decision: the PDFs are not shipped.** Their images are excluded from CC0 by the copyright page. What is shipped is the wording only:
+  a text-only PDF of each, one page for each page of the original, made by `tools/build_nl_documents.py` from text written out by hand in
+  `content/nl-documents/`. The booklet's timeline (an infographic) is written out as a list, and the kit list is the text the website
+  gives for its infographic. Each page says what it is, where it came from and that it is an unofficial copy (the Rijksoverheid and
+  government.nl copyright pages, opened, ask reusers to make clear that the government does not necessarily agree with how its text is
+  shown).
+- CC0 asks for no credit, so the Netherlands credit line in `engine/regions.json` is unchanged (it is the map's). The publisher, licence
+  and source address are in each catalog record and in "About this source".
+- Rijksoverheid.nl's copyright page (https://www.rijksoverheid.nl/copyright, opened) also states CC0 for its texts and almost never allows
+  images; Dutch only, and nothing from it is used.
+- **overstroomik.nl/en** (the flood-risk check; opened: the front page, "about this website", the FAQ, cookies and GDPR): no licence or
+  reuse statement was found, and its copyright line is the developer's. **Not used.** The flooding page of Denk vooruit points to it, and
+  the guide says so and notes it is in Dutch only.
+- **nl-alert.nl** has no English page at /en (404). What the government says about NL-Alert and the siren is on its Denk vooruit pages,
+  which are used.
+
+**How the library holds them.** A document in the library is a record in `library-data/catalog.json`, a file under `library-data/documents/`,
+its text in `library-data/text/` and one row per page in `library-data/search.sqlite`; the guides cite a catalog id and a PDF file page.
+The text-only PDFs are therefore real PDFs, so the app's page view, text view, search, "Ask" and `tools/libq.py` work on them as on any
+other, with no change to the app. `packaging/pack_merge.py` (the "pack_merge.py" the pack spec describes, which this repository did not
+have) puts the add-on in: it copies the files, joins the catalog by id (never overwriting an id that is not its own), inserts the pages
+into the search index, recomputes `summary.json`, notes the add-on in `pack.json` (`add_ons`) and updates `pack-manifest.tsv`, so setup's
+repair does not report the library damaged. `remove` undoes it. A zip is checked as setup checks a pack (relative names, no links, only
+the add-on's own files).
+
+**Guides.** `content/topics/nl-kit.json`, `nl-alerts.json`, `nl-flood.json` and `nl-outage.json` (72-hour kit and plan; NL-Alert, the
+siren, radio and 112; flood, storm and leaving home; long power and water cuts), 77 references (readings and limits) to pages of the four documents.
+A guide with `needs_doc` (a new optional field, `content/SCHEMA.md`) is left out of `/api/topics` when that document is not in the
+library, so a US library, or a Dutch library without the add-on, does not show them. Everything else about a guide is as before:
+`tools/validate_topics.py` checks every id and page against a library with the add-on, and a test (`app.tests.test_nl_documents`) also
+checks that each page a guide cites contains the words its note relies on. The publisher "Government of the Netherlands" is labelled
+"Government guidance" like the other government sources.
+
+**Setup does not install it.** Setup installs a library, a map and an address index, and replaces the whole library when it upgrades.
+The add-on is one extra command (README, "The Dutch guides and documents"), and has to be added again after an upgrade. Teaching setup
+a fourth kind of download is left undone.
+
+**Not covered.** Dutch-language material (Rode Kruis, Nederland Veilig, the Dutch booklet), and the pages for fuel, empty shelves, card
+payments, wildfire, cyber, earthquake and others on the Denk vooruit risk list; they could be added to `webpages.txt` the same way.
+
 ## Licence notes and attribution
 
 - **CC0 1.0** (Kadaster BAG, AHN, RVO BRP, Wikidata): no conditions; credited as a courtesy, except Wikidata, which is credited here
@@ -366,8 +431,6 @@ Setup's map choice lists the Netherlands under "Countries", above the 52 US stat
 
 - **Flood scenarios per breach.** LIWO's scenarios for one dike breach at a time (depth, speed, arrival time) have no open bulk
   download that was found; the ROR maps above are the open substitute.
-- **Dutch guides and documents.** The English Denk vooruit booklet and emergency kit list (Rijksoverheid, text CC0, images
-  excluded; opened) belong in a library add-on pack, with guides pointing at their pages.
 - **Hosting.** Lastbook's site does not host the Netherlands zips; their manifest entries are marked `local_only`. This
   fork publishes the zips of this build as a GitHub release ([nl-map-2026-11-17](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17)),
   for people who want to install them without building.
@@ -381,7 +444,9 @@ Setup's map choice lists the Netherlands under "Countries", above the 52 US stat
   - the PDOK Bestuurlijke Gebieden licence (CC BY 4.0);
   - the 3D BAG copyright page (https://docs.3dbag.nl/en/copyright/), delivery pages, attribute pages and release notes, and the
     data dump itself (CC BY 4.0);
-  - the Denk vooruit copyright page;
+  - the Denk vooruit copyright page, its PDFs and the web pages the add-on copies;
+  - the Rijksoverheid and government.nl copyright pages;
+  - overstroomik.nl/en, which has no licence statement (so not used);
   - for the flood layers, on 17 November 2026: the data.overheid.nl pages of "Overstromingsrisicokaarten" (IPO, CC-0 1.0, updated
     23-04-2026) and of "Dataset Nationale Basisbestanden Primaire Waterkeringen" (Publiek domein, CC Public Domain Mark 1.0,
     updated 12-11-2026), their catalogue records, and the capabilities of both WFS services (fees and access constraints "NONE").

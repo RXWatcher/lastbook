@@ -32,6 +32,7 @@ instead of a US state and you get:
 | Find a town, municipality or province (Den Haag and Den Bosch work as well as BAG's 's-Gravenhage and 's-Hertogenbosch) | BAG towns and villages; OpenStreetMap municipalities and provinces | CC0 1.0; ODbL 1.0 | 67,160 names |
 | Named lakes | OpenStreetMap | ODbL 1.0 | 4,750 |
 | Flood risk (Layers → Flood risk, from zoom 8): primary flood defences as lines; flood scenarios with water depth for floods of about 1 in 10, 100, 1,000 and 10,000 years. Scenarios, not a forecast | Rijkswaterstaat NBPW; the provinces' flood risk maps (EU Floods Directive, ROR) | Public domain; CC0 1.0 | 237 dike sections; 17,782 km² in the largest scenario |
+| Official preparedness documents in English, and four Dutch guides (72-hour kit and plan; warnings, radio and 112; flood, storm and leaving home; long power or water outage) | Government of the Netherlands, Denk vooruit (NCTV): booklet, kit list, plan form, nine web pages | CC0 1.0; text only, pictures not included | 4 documents, 45 pages; an add-on, see [The Dutch guides and documents](#the-dutch-guides-and-documents) |
 
 The map screen follows the region: kilometres and metres, the Dutch credit line
 (`© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · 3DBAG by tudelft3d and 3DGI · Natural Earth`), "Find an address, postcode or town", the date the
@@ -159,14 +160,41 @@ adds the Netherlands to `derived/release/manifest-v1.json`, the release manifest
 release material and is not in this repository, so it must also list the library packs. The built app still installs the
 Netherlands only from the files.
 
+#### The Dutch guides and documents
+
+The four guides (Netherlands: kit and plan; warnings, radio and 112; flood, storm and leaving home; a long power or water outage) cite
+pages of the Dutch government's English preparedness material, which is a small add-on to the library, not part of the map. A library
+without the add-on does not show these guides at all; a US library never does.
+
+The add-on holds four text-only documents (45 pages): the 32-page booklet "Prepare for an emergency situation", the one-page emergency
+kit list, the emergency plan form, and nine web pages (NL-Alert, the siren, the emergency radio stations with their FM frequencies, the
+25 safety regions, flooding, power cuts, drinking water, extreme weather). The government's site puts its text under CC0 1.0 and leaves out
+photographs, infographics and other images, and the PDFs are full of pictures, so only the wording is included, with the original's page
+numbers: a guide's page number is the page of the original PDF file (for the nine web pages, one page each, and two for the radio page). It is built from the text in `content/nl-documents/`, with no
+download and only the standard library:
+
+```bash
+python3 tools/build_nl_documents.py derived/nl-guides/addon --zip derived/nl-guides/Lastbook-Addon-NL-Preparedness.zip
+# close Lastbook, then put the documents into your library (the folder that holds library-data/; on a Mac by default
+# ~/Library/Application Support/Lastbook/LastbookData):
+python3 packaging/pack_merge.py add --data "$HOME/Library/Application Support/Lastbook/LastbookData" derived/nl-guides/Lastbook-Addon-NL-Preparedness.zip
+```
+
+Open Lastbook and the four guides are in the list; the documents are searchable and open page by page like any PDF. To take them out
+again: `python3 packaging/pack_merge.py remove --data <LastbookData> nl-preparedness`. Setting up a different library (an upgrade) replaces
+the library, so run the `add` again afterwards. `pack_merge.py` also writes the add-on's files into the library's `pack-manifest.tsv`, so
+setup's repair does not call them damaged.
+
 ### What is not there yet
 
 - **Out-of-hours GP posts may be out of date.** The map has 119 points: 61 from OpenStreetMap and 58 from Wikidata, whose list
   dates from 2018 and 2019. RIVM counts about 101 today, so a few points may be closed or moved, or doubled. RIVM's own list
   has no licence that allows reuse. Call 112 or your own GP's number. Emergency departments are as tagged in OpenStreetMap
   (75, RIVM counts 79), and a few hospitals with one are not marked.
-- **No Dutch guides or documents** yet. The guides are upstream's, US-based but mostly general (water, first aid, food,
-  shelter). The government's English "Denk vooruit" booklet and emergency kit list are the obvious next addition.
+- **The Dutch guides are an extra step**, and cover only the government's own English material: the 72-hour kit and plan, warnings and
+  112, floods and leaving home, long power and water cuts. Upstream's other guides (water, first aid, food, shelter) are US-based but
+  mostly general. The documents are text-only (the government's pictures are not CC0), and the radio frequency table and phone numbers are
+  as the government published them on 17 November 2026.
 - **No building heights** for the 3D view, and no Caribbean Netherlands.
 - **AEDs**: OpenStreetMap has about 4,400, far fewer than the national register, and most public AEDs are in locked cabinets
   whose code comes from 112.
@@ -181,6 +209,8 @@ Netherlands only from the files.
   computer (`docs/SETUP-API.md`).
 - `tools/build_map_osm.py`, `build_bag.py`, `build_bag_extra.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`, `build_floods_nl.py`: the Netherlands
   builders. `tools/map_schema.py` holds the street-map format they share with `tools/build_map.py`.
+- `tools/build_nl_documents.py`, `packaging/pack_merge.py`, `content/nl-documents/`, `content/topics/nl-*.json`: the Dutch documents add-on, the tool
+  that puts an add-on into a library, the text it is built from, and the four guides. A guide with `needs_doc` shows only where that document is (`content/SCHEMA.md`).
 - `packaging/region_maps.py`: assembles, checks and zips a region's map set. `packaging/map_sets.py` holds the map-set
   contract it shares with `packaging/state_maps.py`.
 - Design and implementation plan: `docs/superpowers/specs/2026-11-17-netherlands-region-design.md` and
@@ -405,7 +435,7 @@ before running them. Their disposable test distro is named `LastbookTest`, with 
 ## Tests
 
 ```bash
-python3 -B -m unittest app.tests.test_bridge app.tests.test_setup app.tests.test_data_folder app.tests.test_what_ships app.tests.test_update app.tests.test_address_search app.tests.test_topic_search app.tests.test_chat_steps app.tests.test_validate_topics app.tests.test_libq app.tests.test_regions app.tests.test_address_nl app.tests.test_region_server
+python3 -B -m unittest app.tests.test_bridge app.tests.test_setup app.tests.test_data_folder app.tests.test_what_ships app.tests.test_update app.tests.test_address_search app.tests.test_topic_search app.tests.test_chat_steps app.tests.test_validate_topics app.tests.test_libq app.tests.test_regions app.tests.test_address_nl app.tests.test_region_server app.tests.test_nl_documents
 python3 -I -B packaging/test_region_maps.py                                          # the region map-set packager
 derived/buildenv/bin/python -B -m unittest discover -s tools/tests -t .              # the Netherlands build tools (build venv)
 ```
