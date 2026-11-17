@@ -7,13 +7,15 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-import server
+server = None     # imported in setUp: importing it here would fix its data folder before test_bridge's fixture sets one
 
 NL_CREDITS = '© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · Natural Earth'
 
 
 class RegionServer(unittest.TestCase):
     def setUp(self):
+        global server
+        import server
         self.data = Path(tempfile.mkdtemp())
         (self.data / 'derived/geo').mkdir(parents=True)
         (self.data / 'pack.json').write_text(json.dumps({'name': 'small', 'map': 'base'}))
