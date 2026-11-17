@@ -25,6 +25,26 @@ class Classify(unittest.TestCase):
         self.assertEqual(c({'shop': 'supermarket'}, 'node'), [('poi', 'supermarket', None)])
         self.assertEqual(c({'natural': 'spring'}, 'node'), [('poi', 'spring', None)])
 
+    def test_huisartsenpost_names(self):
+        c = build_map_osm.classify
+        hap = [('poi', 'huisartsenpost', None)]
+        doctors = lambda name, **kw: dict({'amenity': 'doctors', 'name': name}, **kw)
+        for name in ('Huisartsenspoedpost Breda', 'Huisartenspoedpost Zeist', 'Spoedpost', 'Spoedpost Alrijne', 'Spoedpost Huisartsen Apeldoorn',
+                     'Dokterswacht Friesland', 'dokterswacht Friesland', 'SMC Huisartsenpost', 'huisartsenpost Arnhem Noord', 'HAP Havelte'):
+            self.assertEqual(c(doctors(name), 'node'), hap, name)
+        self.assertEqual(c({'amenity': 'clinic', 'name': 'Huisartsenspoedpost Dirksland'}, 'node'), hap)
+        self.assertEqual(c({'healthcare': 'doctor', 'name': 'Huisartsenspoedpost'}, 'node'), hap)           # no amenity tag
+        self.assertEqual(c({'building': 'hospital', 'healthcare': 'yes', 'name': 'Huisartsenpost'}, 'area'), hap)
+        # ordinary practices, emergency departments, dentists, pharmacies and food shops are not out-of-hours GP posts
+        for tags in (doctors('Huisartsenpraktijk Acht'), doctors('Huisartsenmaatschap Delfgauw'), doctors('Spoedeisende hulp'),
+                     doctors('Spoedtest', healthcare='sample_collection'), doctors('Haptonomie Utrecht'), doctors('Hapert Medisch'),
+                     {'amenity': 'dentist', 'name': 'Tandartsspoedpraktijk'}, {'amenity': 'dentist', 'name': 'Spoed Tandarts Zeeland'},
+                     {'amenity': 'pharmacy', 'name': 'Spoedapotheek Den Haag'}, {'amenity': 'fast_food', 'name': 'De Snelle Hap'},
+                     {'amenity': 'parking', 'name': 'Huisartsenspoedpost Zeist'}, {'amenity': 'restaurant', 'name': 'Hap Hmm'},
+                     {'emergency': 'emergency_ward_entrance', 'name': 'Spoedpost Ter Gooi'}, doctors('Huisartsenpraktijk H. Post'),
+                     doctors('Lijfarts Spoedpoli')):
+            self.assertNotEqual(c(tags, 'node'), hap, tags)
+
     def test_classify_areas(self):
         c = build_map_osm.classify
         self.assertEqual(c({'natural': 'water', 'water': 'lake'}, 'area'), [('feat', 'water', 'lake')])

@@ -14,9 +14,10 @@ With --admin, also a build-only admin.sqlite: municipalities (admin_level 8, wit
 which tools/build_places_nl.py reads. It never ships.
 
 Classes follow the names of Geofabrik's "free" schema, so map.js draws them as it draws tools/build_map.py's output. Dutch help
-points: hospitals with an emergency department (emergency=yes) are 'hospital_seh'; doctors or clinics named huisartsenpost or HAP
-are 'huisartsenpost' (out-of-hours GP posts; OpenStreetMap has no tag of its own for them); defibrillators and emergency assembly
-points keep their emergency=* value.
+points: hospitals with an emergency department (emergency=yes) are 'hospital_seh'; doctors or clinics named huisartsenpost,
+huisartsenspoedpost, spoedpost, dokterswacht or HAP are 'huisartsenpost' (out-of-hours GP posts; OpenStreetMap has no tag of its
+own for them; tools/build_hap_nl.py adds the ones it lacks); defibrillators and emergency assembly points keep their emergency=*
+value.
 """
 import argparse, re, sqlite3, sys, time
 from pathlib import Path
@@ -27,10 +28,13 @@ LINES = {'waterway': {'river', 'canal', 'stream', 'drain', 'ditch'}, 'railway': 
 POI_ALIASES = {('amenity', 'toilets'): 'toilet', ('shop', 'bicycle'): 'bicycle_shop', ('tourism', 'camp_site'): 'camp_site',
                ('leisure', 'park'): None, ('man_made', 'water_tower'): 'water_tower', ('man_made', 'water_works'): 'water_works',
                ('man_made', 'wastewater_plant'): 'wastewater_plant', ('natural', 'spring'): 'spring'}
-HAP = re.compile(r'huisartsenpost|\bHAP\b', re.I)
+# Names OpenStreetMap mappers give out-of-hours GP posts: Huisartsenpost, Huisartsenspoedpost (also the typo Huisartenspoedpost),
+# Spoedpost, HAP, and Dokterswacht (Friesland's name). "Spoedeisende hulp" (an emergency department) and "Huisartsenpraktijk" (a
+# daytime practice) do not match, and neither does "Haptonomie" or "Hapert" (\bHAP\b).
+HAP = re.compile(r'huisarts?enpost|spoedpost|\bHAP\b|dokterswacht', re.I)
 # Only objects with one of these keys reach Python: pyosmium drops the rest after storing node locations (most of the file).
 KEYS = ('highway', 'waterway', 'railway', 'natural', 'water', 'landuse', 'leisure', 'boundary', 'place', 'amenity', 'shop',
-        'emergency', 'man_made', 'tourism')
+        'emergency', 'man_made', 'tourism', 'healthcare')
 ADMIN_LEVELS = {'4': 'province', '8': 'municipality'}
 
 
@@ -78,7 +82,10 @@ def poi_class(tags):
     amenity = get('amenity')
     if amenity == 'hospital':
         return 'hospital_seh' if get('emergency') == 'yes' else 'hospital'
-    if amenity in ('doctors', 'clinic') and HAP.search(get('name') or ''):
+    health = get('healthcare')
+    # Mapped as amenity=doctors or clinic, or with healthcare=* alone (a doctor, a clinic, or a building marked healthcare=yes).
+    if (amenity in ('doctors', 'clinic') or (not amenity and (health in ('doctor', 'clinic') or (health == 'yes' and get('building'))))) \
+            and HAP.search(get('name') or ''):
         return 'huisartsenpost'
     for key in ('amenity', 'shop', 'man_made', 'tourism', 'natural', 'leisure'):
         value = get(key)

@@ -67,6 +67,7 @@ Twelve provinces would add nothing a person needs.
 | Streets, land use, water shapes, rail, place names (`national.sqlite`) | OSM extract | Geofabrik `netherlands-latest.osm.pbf` (about 1.3 GB), read by `tools/build_map_osm.py` | OpenStreetMap contributors | ODbL 1.0 | opened |
 | Sea and coast (`national.sqlite`, layers `ocean`, `island`) | OSM coastline, closed westward | OSM water and land polygons, split, EPSG:4326 (osmdata.openstreetmap.de) | OpenStreetMap contributors | ODbL 1.0 | opened |
 | Help points (`poi`) | OSM | OSM, with Dutch classes (see Help points) | OpenStreetMap contributors | ODbL 1.0 | opened |
+| Out-of-hours GP posts the OSM lacks (`poi`, class `huisartsenpost`) | none | Wikidata items for huisartsenposten, read by `tools/build_hap_nl.py` | Wikidata contributors | CC0 1.0 | opened |
 | Buildings (`buildings.sqlite`) | Microsoft footprints | BAG `pand`, from PDOK `bag-light.gpkg` (7.8 GB) | Kadaster | CC0 1.0 | opened |
 | Addresses (`addresses/NL.sqlite`) | Overture | BAG `verblijfsobject`, `ligplaats`, `standplaats` from the same file; secondary addresses from PDOK `lvbag-extract-nl.zip` (3.66 GB) | Kadaster | CC0 1.0 | opened |
 | Elevation (`terrain.sqlite`) | USGS 3DEP 1 arc-second | AHN4 terrain model (`dtm_05m`) from PDOK's WCS, asked for at 1 arc-second in EPSG:4326 | Rijkswaterstaat / Het Waterschapshuis | CC0 1.0 (stated in the service's capabilities) | opened |
@@ -121,23 +122,65 @@ OpenStreetMap is the source for help points. Classes added for the Netherlands (
 | Class | From | Layer in the map |
 |---|---|---|
 | `hospital_seh` | `amenity=hospital` with `emergency=yes` (an emergency department, SEH) | Hospitals |
-| `huisartsenpost` | `amenity=doctors` or `clinic` named "Huisartsenpost" or "HAP" (out-of-hours GP post) | Clinics & doctors |
+| `huisartsenpost` | `amenity=doctors` or `clinic` (or `healthcare=doctor`, `clinic`) named "Huisartsenpost", "Huisartsenspoedpost", "Spoedpost", "Dokterswacht" or "HAP" (out-of-hours GP post), plus Wikidata's list (see below) | Clinics & doctors |
 | `defibrillator` | `emergency=defibrillator` | Defibrillators (AED), new |
 | `assembly_point` | `emergency=assembly_point` | Emergency assembly points, new |
 
 Coverage, from Overpass counts on 17 November 2026 (search only) and the build:
 
-- **Hospitals with an emergency department.** OSM has 79 hospitals tagged `emergency=yes`, which matches RIVM's count of 79
-  SEH locations in its 2026 reachability analysis (opened).
-- **Out-of-hours GP posts are thin.** OSM has 48 named huisartsenposten against 111 to 115 in the ZorgkaartNederland and
-  Zorgbeurs directories (search only), which are not open data. RIVM's VZinfo publishes a list (search only, licence not
-  checked). This is the largest known gap.
+- **Hospitals with an emergency department.** RIVM's 2026 reachability analysis counts 79 SEH locations (opened). The
+  Geofabrik file holds 75 hospitals tagged `emergency=yes`, which is what the map shows (an earlier Overpass count of 79 was
+  not reproduced). Not all 75 are an SEH (two forensic clinics and the Sint Maartenskliniek carry the tag), and at least
+  six real ones are not tagged: ZGT Hengelo, IJsselland Ziekenhuis, Franciscus Gasthuis, Sint Jansdal, Treant Refaja
+  Ziekenhuis and Gelre Zutphen have only an `emergency=emergency_ward_entrance` node nearby. No open list of SEH locations
+  was found (see below), so none was added; the net effect is that the map's count is about right but not the same set.
+- **Out-of-hours GP posts.** RIVM counts 101 posts in 2025 (VZinfo; InEen's 2025 benchmark says 99); the ZorgkaartNederland and
+  Zorgbeurs directories list 111 to 115 (search only, not open data, not used). See "Out-of-hours GP posts" below for the
+  sources checked and what the map now holds.
 - **AEDs.** OSM has about 4,300 defibrillators, a small share of the national AED register. Most public AEDs in the
   Netherlands are in locked cabinets, and the code comes from 112, so a location is a starting point, not a promise.
 
+### Out-of-hours GP posts
+
+OpenStreetMap has no tag for a huisartsenpost, so mappers name them. Names are matched by `HAP` in `tools/build_map_osm.py`.
+The first build matched only "Huisartsenpost" and "HAP" and found 38. Scanning every name, alternative name and operator in
+the Geofabrik file for huisartsen, spoed, wacht, dienst and HAP showed what it missed: "Huisartsenspoedpost X" (the most
+common), the typo "Huisartenspoedpost", "Spoedpost", "Dokterswacht Friesland", and some posts tagged `healthcare=doctor`
+without `amenity`. The rule now catches those and still skips ordinary practices ("Huisartsenpraktijk", "Huisartsenmaatschap"),
+emergency departments ("Spoedeisende hulp"), dentists ("Tandartsspoedpraktijk"), pharmacies, car parks, restaurants
+("Hap Hmm", "De Snelle Hap") and the like. This gives **61** posts from OpenStreetMap alone. Two posts are tagged as pharmacies
+("Huisartsenpost Neede", "HAP Havelte"); they are left out rather than guessed at.
+
+For the rest, `tools/build_hap_nl.py` adds Wikidata's items for huisartsenposten (instance of "general practice center", country
+the Netherlands): 121 items, 105 with coordinates. Each is added unless one already lies within 150 m, and keeps its Wikidata
+name. Result: **119** posts (61 from OpenStreetMap, 58 added), with 16 items left out for lack of coordinates. RIVM counts 101
+posts in 2025, so the map errs on the side of too many: the Wikidata items were entered in 2018 and 2019 from RIVM's list, and
+a post that has since closed, merged or moved can still be there, and a post OpenStreetMap names differently can appear twice
+when the two points are more than 150 m apart. Treat a point as a place to start from: call 112 in an emergency, or the number
+your own practice gives out of hours.
+
+What was opened, and the verdict (17 November 2026):
+
+| Source | What it has | Licence it states | Verdict |
+|---|---|---|---|
+| OpenStreetMap, Geofabrik file | named posts, see above | ODbL 1.0 | used |
+| Wikidata, <https://www.wikidata.org/wiki/Wikidata:Licensing>, and the items themselves (SPARQL via `query.wikidata.org`) | 121 items with name, coordinates, website; each cites the RIVM VZinfo CSV of 2018 or 2019 | all structured data is CC0 1.0 | used; credited in these docs and the map's `meta` table |
+| RIVM VZinfo, <https://www.vzinfo.nl/acute-zorg/regionaal/hap> | an interactive map of all posts (from a script on `cstm.rivm.nl`), no download link on the page | none stated. The citation page says only "U mag altijd onze grafieken/kaarten gebruiken zolang u maar duidelijk de bron www.vzinfo.nl erbij vermeldt"; the disclaimer says the site "biedt open data" but names no licence. RIVM's own copyright page covers reports and images only | not used: no licence for the data, and a permission to show charts is not one to redistribute a database. Worth asking RIVM; a licence statement would let the build use the current list instead of the 2018 to 2019 copy |
+| data.overheid.nl, data request 2018-1768 "overzicht Huisartsenposten en SEH's in Nederland" | RIVM's answer points to the VZinfo map and to CBS for addresses | none stated | not used; no file |
+| data.overheid.nl, CBS "Adresgegevens en xy-coördinaten van huisartsenposten" and the huisartspraktijken sets | microdata (search listing only) | "Geen open licentie" | not used |
+| data.overheid.nl, Utrecht "Service Area Huisartsen 500m" | a 500 m service area around GP practices in the city of Utrecht | CC0 on the dataset, CC BY-SA 4.0 on its files | not used: practices, not posts, one city, and conflicting licences |
+| CBS StatLine 80305NED "Nabijheid voorzieningen" | travel distances to the nearest huisartsenpost by area | CC BY 4.0 | not used: figures, not locations |
+| InEen Benchmark huisartsenposten 2025, <https://benchmarkhap.ineen.nl/> | 99 posts in 50 huisartsendienstenstructuren, in aggregate; no address list or download | none stated | not used |
+| ZorgkaartNederland, Zorgbeurs | 111 to 115 posts | not open data | not used, not scraped |
+
+No open source was found for the SEH locations either: RIVM's SEH list is on the same VZinfo map and has the same licence gap,
+and the CBS location sets are not open.
+
 ## Licence notes and attribution
 
-- **CC0 1.0** (Kadaster BAG, AHN, RVO BRP): no conditions; credited as a courtesy.
+- **CC0 1.0** (Kadaster BAG, AHN, RVO BRP, Wikidata): no conditions; credited as a courtesy, except Wikidata, which is credited here
+  and in `build_hap_nl.py` and the map's `meta` table, not in the on-map line (a CC0 source needs none, and the line is checked
+  by tests).
 - **ODbL 1.0** (OpenStreetMap): credit, and the map database stays open, as for the US map.
 
 The credit line on the Netherlands map is `© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · Natural Earth`
@@ -180,6 +223,8 @@ python3.11 -m venv derived/buildenv && derived/buildenv/bin/pip install -r tools
 B=derived/buildenv/bin/python; S=derived/sources/nl; G=derived/geo-nl; BOX=3.2,50.7,7.3,53.7
 $B tools/build_map_osm.py $S/netherlands-latest.osm.pbf $G/national.sqlite --box $BOX \
    --water-polygons $S/water-polygons-split-4326 --land-polygons $S/land-polygons-split-4326 --admin $G/admin.sqlite
+$B tools/build_hap_nl.py $G/national.sqlite $G/national-hap.sqlite --csv derived/nl-hap/dl-wikidata/hap.csv --download
+mv $G/national-hap.sqlite $G/national.sqlite         # out-of-hours GP posts from Wikidata; needs the network, so it is a build step only
 $B tools/build_water.py --geo $G osm
 $B tools/build_bag.py $S/bag-light.gpkg $G --box $BOX
 $B tools/build_bag_extra.py $S/lvbag-extract-nl.zip $G/addresses/NL.sqlite $G/addresses/NL-full.sqlite && mv $G/addresses/NL-full.sqlite $G/addresses/NL.sqlite
@@ -237,7 +282,12 @@ Help points in the map, by class:
 | Other hospitals | 92 |
 | Out-of-hours GP posts | 38 |
 
-The Overpass count of hospitals with `emergency=yes` was 79; the map has 75 `hospital_seh` points. The difference was not looked into.
+The Overpass count of hospitals with `emergency=yes` was 79; the map has 75 `hospital_seh` points (see Help points).
+
+Rebuilt for out-of-hours GP posts on 17 November 2026 (`build_map_osm.py` 15 min, then `build_hap_nl.py` under 1 min): the new
+name rules give 61 posts from OpenStreetMap, up from 38, and 77,925 points in all; `build_hap_nl.py` adds 58 from Wikidata
+(47 of its 105 located items already lie within 150 m of an OSM post), giving **119** posts and 77,983 points. The tables
+above are from the first build. `places.sqlite` lists named help points, so it is rebuilt after this step.
 
 **End to end.** First-run setup was run with the Small library and the Netherlands, all three zips found on the computer.
 It checked each against the manifest's size and SHA-256, installed them and switched the library in, with nothing
@@ -287,8 +337,10 @@ Setup's map choice lists the Netherlands under "Countries", above the 52 US stat
   - the Denk vooruit copyright page.
 - **Search only:**
   - Overpass counts of help points;
-  - the huisartsenpost directories;
-  - the NBPW licence.
+  - the ZorgkaartNederland and Zorgbeurs huisartsenpost directories (not open, not used);
+  - the NBPW licence;
+  - the CBS huisartspraktijken sets and the Utrecht service-area set on data.overheid.nl (listing pages only).
+- **Opened, not used:** RIVM VZinfo's huisartsenpost map and its citation and disclaimer pages, RIVM's copyright page,
+  data request 2018-1768, InEen's benchmark site (all in "Out-of-hours GP posts" above).
 - **Not checked:**
-  - the licence of RIVM's VZinfo huisartsenpost list;
   - whether Geofabrik's extract boundary leaves out any Dutch islands (the Wadden islands are in the build).
