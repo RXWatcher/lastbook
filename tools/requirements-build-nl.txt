@@ -7,3 +7,4 @@ pyproj==3.7.2           # the last release that supports Python 3.11
 osmium==4.3.2
 Pillow==13.0.0
 pyshp==3.1.6
+imagecodecs==2026.3.6   # decodes the floating-point predictor in AHN GeoTIFFs; the last release for Python 3.11

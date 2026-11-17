@@ -24,10 +24,10 @@ SPAN = 2 ** (MAXZ - SUPERZ)          # z12 tiles per z8 supertile edge (16)
 PX = 256 * SPAN                      # 4096 px
 
 
-def cells():
+def cells(src=None):
     """(top latitude, left longitude) -> GeoTIFF path for every 1° source cell."""
     out = {}
-    for d in SRC.iterdir():
+    for d in Path(src or SRC).iterdir():
         m = re.fullmatch(r'([ns])(\d+)([ew])(\d+)', d.name)
         if not m:
             continue
@@ -121,8 +121,11 @@ def supertile(args):
     return out, H
 
 
-def init():
-    global CELLS
+def init(src=None):
+    """Find the source cells: in each worker process too, which is started afresh and needs the folder passed in."""
+    global CELLS, SRC
+    if src:
+        SRC = Path(src)
     CELLS = cells()
 
 
@@ -130,8 +133,11 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--bbox', help='W,S,E,N limit (default: everything)')
     ap.add_argument('--workers', type=int, default=24)
+    ap.add_argument('--src', default=str(SRC), help='folder of 1° GeoTIFF cells named like n34w118 (default: USGS 3DEP in the library)')
+    ap.add_argument('--out', default=str(OUT), help='the terrain database to write')
+    ap.add_argument('--source-label', default='USGS 3DEP 1 arc-second DEM (library-data/geography/usgs/Elevation/1)')
     a = ap.parse_args()
-    init()
+    init(a.src)
     keys = set()
     for top, left in CELLS:
         if a.bbox:
@@ -146,7 +152,8 @@ def main():
             for y in range(ys[0], ys[1] + 1):
                 keys.add((x, y))
     keys = sorted(keys, key=lambda k: (k[1] // 2, k[0], k[1]))  # neighbours together so source cells stay cached
-    db = sqlite3.connect(OUT)
+    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    db = sqlite3.connect(a.out)
     db.executescript('PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; CREATE TABLE IF NOT EXISTS tile(z INT, x INT, y INT, png BLOB, PRIMARY KEY(z,x,y)) WITHOUT ROWID;'
                      'CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT);'
                      'CREATE TABLE IF NOT EXISTS done(x INT, y INT, h8 BLOB, PRIMARY KEY(x,y)) WITHOUT ROWID;')
@@ -155,7 +162,7 @@ def main():
     todo = [k for k in keys if k not in finished]
     print(f'{len(finished)} supertiles already built, {len(todo)} to go', flush=True)
     t0, done, ntiles = time.time(), 0, 0
-    with ProcessPoolExecutor(a.workers, initializer=init) as pool:
+    with ProcessPoolExecutor(a.workers, initializer=init, initargs=(a.src,)) as pool:
         futs = [pool.submit(_job, k) for k in todo]
         for f in as_completed(futs):
             tiles, h8, key = f.result()  # a dead worker raises here instead of hanging
@@ -184,7 +191,7 @@ def main():
             db.execute('INSERT OR REPLACE INTO tile VALUES (?,?,?,?)', (z, x, y, png(h)))
         level = nxt
     db.execute('INSERT OR REPLACE INTO meta VALUES (?,?)', ('built', time.strftime('%Y-%m-%dT%H:%M:%S')))
-    db.execute('INSERT OR REPLACE INTO meta VALUES (?,?)', ('source', 'USGS 3DEP 1 arc-second DEM (library-data/geography/usgs/Elevation/1)'))
+    db.execute('INSERT OR REPLACE INTO meta VALUES (?,?)', ('source', a.source_label))
     db.commit()
     print(f'done: {done} supertiles, {ntiles:,} tiles in {time.time() - t0:.0f}s', flush=True)
 
