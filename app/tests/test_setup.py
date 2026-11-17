@@ -1290,6 +1290,84 @@ class RegionMaps(Maps):
             self.assertEqual((new / 'derived/geo/addresses' / name).read_bytes(), b'index ' + name.encode())
 
 
+class Addons(RegionMaps):
+    """An add-on of documents that goes with a region's map (the Netherlands documents and guides): installed by setup with the map
+    when its file is on this computer, never downloaded, and skipped quietly when it is not there."""
+
+    def setUp(self):
+        super().setUp()
+        from app.tests import test_nl_documents as docs
+        self.docs = docs
+        src = docs.small_sources(self.tmp / 'addon-src')
+        docs.build.build(self.tmp / 'addon', src, built='2026-11-17')
+        self.addon_zip = self.tmp / 'Lastbook-Addon-NL-Test.zip'
+        docs.build.zip_addon(self.tmp / 'addon', self.addon_zip)
+
+    def addon_manifest(self, placed=True):
+        mf, zpath = self.nl_manifest()
+        self.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(zpath, self.parent / zpath.name)
+        if placed:
+            shutil.copy(self.addon_zip, self.parent / self.addon_zip.name)
+        data = self.addon_zip.read_bytes()
+        raw = json.loads(json.dumps(mf.current))
+        raw['addons'] = [{'id': 'nl-test', 'title': 'Netherlands documents', 'kind': 'addon', 'with_map': 'NL', 'local_only': True,
+                          'available': True, 'installed_bytes': 10 * len(data),
+                          'files': [{'name': self.addon_zip.name, 'url': f'{self.base}/{self.addon_zip.name}', 'size': len(data),
+                                     'sha256': sha(data), 'kind': 'zip'}]}]
+        validated = manifest.validate(raw, ALLOWED)
+        self.assertIsNotNone(validated)
+        return manifest.Manifest(bundled=validated, remote=None, allowed=ALLOWED, context=self.ctx)
+
+    def library(self):
+        return self.docs.made_up_library(self.parent)
+
+    def test_manifest_keeps_addons(self):
+        mf = self.addon_manifest()
+        a = mf.current['addons'][0]
+        self.assertEqual((a['id'], a['kind'], a['with_map'], a['local_only']), ('nl-test', 'addon', 'NL', True))
+        self.assertIn('addons', mf.public())
+
+    def test_addon_installed_with_its_map(self):
+        mf = self.addon_manifest()
+        cur = self.library()
+        s = self.setup('manage', current=cur, manifest=mf)
+        self.assertEqual([f['id'] for f in s.found() if f['kind'] == 'addon'], ['nl-test'])
+        with mock.patch.object(download, 'Download', side_effect=AssertionError('a local-only add-on must never be downloaded')):
+            j = s.start(None, False, map_id='NL')
+            self.assertEqual([i['kind'] for i in j['items']], ['map', 'addon'])
+            self.assertEqual(self.wait(s)['state'], 'done')
+        ids = [r['id'] for r in json.loads((cur / 'library-data' / 'catalog.json').read_text(encoding='utf-8'))]
+        self.assertIn('doc-a', ids)
+        self.assertTrue(any(i.startswith('nl-test') for i in ids), ids)
+        self.assertEqual(self.setup('manage', current=cur, manifest=mf).current_info()['add_ons'], ['nl-test'])
+        self.assertTrue((self.parent / self.addon_zip.name).is_file())      # the person's own file is left where it was
+
+    def test_addon_skipped_when_its_file_is_not_here(self):
+        mf = self.addon_manifest(placed=False)
+        s = self.setup('manage', current=self.library(), manifest=mf)
+        j = s.start(None, False, map_id='NL')
+        self.assertEqual([i['kind'] for i in j['items']], ['map'])
+        self.assertEqual(self.wait(s)['state'], 'done')
+
+    def test_an_addon_counts_its_own_download(self):
+        work = self.tmp / 'work'
+        (work / 'downloads').mkdir(parents=True)
+        (work / 'downloads' / 'm.gguf').write_bytes(b'x' * 10)
+        (work / 'downloads' / 'a.zip.part').write_bytes(b'x' * 3)
+        plan = {'work': str(work), 'model': {'file': 'm.gguf'}, 'addons': [{'id': 'a', 'files': [{'name': 'a.zip'}]}]}
+        self.assertEqual(api.Setup._on_disk(plan, {'kind': 'addon', 'id': 'a'}), 3)
+
+    def test_a_saved_job_keeps_its_addon(self):
+        mf = self.addon_manifest()
+        s = self.setup('manage', current=self.library(), manifest=mf)
+        with mock.patch.object(api.Setup, '_run', lambda self: None):
+            s.start(None, False, map_id='NL')
+        again = s._checked_job(json.loads(json.dumps(s.job)))
+        self.assertIsNotNone(again)
+        self.assertEqual([a['id'] for a in again['plan']['addons']], ['nl-test'])
+
+
 class ContentRevisions(Base):
     def revised_manifest(self, revision='2026-11-13-small-v2', actual_revision=None):
         metadata = {'name': 'small', 'map': 'base', 'content_revision': actual_revision or revision}

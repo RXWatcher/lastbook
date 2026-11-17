@@ -156,8 +156,9 @@ def check(dest, code):
     return fails
 
 
-def package(code, dest, addresses, zips=ZIPS):
-    """Zip the map set and the address index; returns their manifest entries (maps, address_indexes)."""
+def package(code, dest, addresses, zips=ZIPS, addon=None):
+    """Zip the map set and the address index; returns their manifest entries (maps, address_indexes), and, with addon (an add-on zip
+    such as tools/build_nl_documents.py makes), a third entry for it: setup installs it with the map (engine/setup/addons.py)."""
     region = regions.get(code)
     zips = Path(zips)
     zips.mkdir(parents=True, exist_ok=True)
@@ -180,14 +181,28 @@ def package(code, dest, addresses, zips=ZIPS):
     addr = {'id': code, 'title': region['name'], 'kind': f'{kind}-addresses', 'local_only': True, 'available': True,
             'installed_bytes': Path(addresses).stat().st_size, 'records': records,
             'files': [{'name': az.name, 'url': f'{BASE}/addresses/{az.name}', 'size': az.stat().st_size, 'sha256': sha_file(az), 'kind': 'zip'}]}
-    return maps, addr
+    if not addon:
+        return maps, addr
+    addon = Path(addon)
+    with zipfile.ZipFile(addon) as z:
+        name = json.loads(z.read('LastbookData/pack.json'))['name']
+        unpacked = sum(i.file_size for i in z.infolist())
+    oz = zips / addon.name
+    if oz.resolve() != addon.resolve():
+        shutil.copyfile(addon, oz)
+    extra = {'id': name, 'title': f"{region['name']}: preparedness documents and guides", 'kind': 'addon', 'with_map': code,
+             'local_only': True, 'available': True, 'installed_bytes': unpacked,
+             'files': [{'name': oz.name, 'url': f'{BASE}/addons/{oz.name}', 'size': oz.stat().st_size, 'sha256': sha_file(oz), 'kind': 'zip'}]}
+    return maps, addr, extra
 
 
-def list_in_manifest(path, maps, addresses):
+def list_in_manifest(path, maps, addresses, addon=None):
     """Add (or replace) the region's entries in a release manifest, creating it if there is none."""
     path = Path(path)
     m = json.loads(path.read_text(encoding='utf-8')) if path.exists() else {'version': 1}
-    for key, entry in (('maps', maps), ('address_indexes', addresses)):
+    for key, entry in (('maps', maps), ('address_indexes', addresses), ('addons', addon)):
+        if entry is None:
+            continue
         m[key] = [x for x in m.get(key) or [] if x.get('id') != entry['id']] + [entry]
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix('.tmp')
@@ -202,7 +217,7 @@ def dev_manifest(local=MANIFEST, out=DEV_MANIFEST):
     with urllib.request.urlopen(req, timeout=60) as r:
         m = json.loads(r.read().decode('utf-8'))
     mine = json.loads(Path(local).read_text(encoding='utf-8'))
-    for key in ('maps', 'address_indexes'):
+    for key in ('maps', 'address_indexes', 'addons'):
         own = [x for x in mine.get(key) or [] if x.get('local_only')]
         ids = {x['id'] for x in own}
         m[key] = [x for x in m.get(key) or [] if x.get('id') not in ids] + own
@@ -219,6 +234,7 @@ def main():
     b = sub.add_parser('build')
     b.add_argument('code')
     b.add_argument('--src', required=True, help="the region's builders' folder, e.g. derived/geo-nl")
+    b.add_argument('--addon', help='an add-on zip to list with the map (tools/build_nl_documents.py --zip)')
     m = sub.add_parser('manifest')
     m.add_argument('code')
     m.add_argument('--entries', help="the entries file from a build or a release (default: this build's derived/packs/maps/<code>-entries.json)")
@@ -231,13 +247,13 @@ def main():
         fails = check(dest, a.code)
         if fails:
             sys.exit('\n'.join(fails))
-        entries = package(a.code, dest, Path(a.src) / 'addresses' / f'{a.code}.sqlite')
+        entries = package(a.code, dest, Path(a.src) / 'addresses' / f'{a.code}.sqlite', addon=a.addon)
         (OUT / f'{a.code}-entries.json').write_text(json.dumps(entries, indent=1, ensure_ascii=False) + '\n', encoding='utf-8')
         for e in entries:
             log(e['files'][0]['name'], f"{e['files'][0]['size']:,} bytes", e['files'][0]['sha256'])
     elif a.action == 'manifest':
         entries = json.loads(Path(a.entries or OUT / f'{a.code}-entries.json').read_text(encoding='utf-8'))
-        if [e['id'] for e in entries] != [a.code, a.code]:
+        if [e['id'] for e in entries[:2]] != [a.code, a.code] or len(entries) > 3 or (len(entries) == 3 and entries[2].get('with_map') != a.code):
             sys.exit(f'{a.entries} does not hold the {a.code} map and address entries')
         list_in_manifest(MANIFEST, *entries)
         log('listed', a.code, 'in', MANIFEST)

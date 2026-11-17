@@ -66,7 +66,7 @@ def validate(m, allowed=None):
                       'download_bytes': sum(f['size'] for f in files), 'available': available, 'files': files,
                       'map': p['map'] if isinstance(p.get('map'), str) and NAME.match(p['map']) and p['map'] != 'base' else None})
     collections = {}
-    for key in ('maps', 'address_indexes'):
+    for key in ('maps', 'address_indexes', 'addons'):
         entries = []
         for x in m.get(key) or []:
             if not isinstance(x, dict) or not isinstance(x.get('id'), str) or not NAME.match(x['id']):
@@ -90,6 +90,10 @@ def validate(m, allowed=None):
                          'local_only': x.get('local_only') is True,
                          'installed_bytes': x.get('installed_bytes') if _int(x.get('installed_bytes')) else None,
                          'download_bytes': sum(f['size'] for f in files), 'available': available, 'files': files})
+            if key == 'addons':     # documents that go with a region's map (engine/setup/addons.py), installed with it
+                if not (isinstance(x.get('with_map'), str) and NAME.match(x['with_map'])):
+                    return None
+                entries[-1]['with_map'] = x['with_map']
         collections[key] = entries
     for x in m.get('models') or []:
         if not (isinstance(x, dict) and isinstance(x.get('id'), str) and NAME.match(x['id']) and isinstance(x.get('file'), str)
@@ -118,7 +122,7 @@ def merge(bundled, fetched):
     add ids, and give the files of an id the app was built without (a pack published later). One bad publish never takes an
     option away."""
     out = dict(fetched)
-    for key in ('packs', 'models', 'maps', 'address_indexes'):
+    for key in ('packs', 'models', 'maps', 'address_indexes', 'addons'):
         built = {x['id']: x for x in bundled.get(key, [])}
         merged = []
         for x in fetched.get(key, []):
@@ -161,6 +165,9 @@ class Manifest:
     def map(self, mid):
         return next((x for x in self.current.get('maps', []) if x['id'] == mid), None)
 
+    def addon(self, aid):
+        return next((x for x in self.current.get('addons', []) if x['id'] == aid), None)
+
     def address_index(self, state):
         return next((x for x in self.current.get('address_indexes', []) if x['id'] == state), None)
 
@@ -174,4 +181,5 @@ class Manifest:
                 'packs': [{**p, 'files': [strip(f) for f in p['files']]} for p in self.current['packs']],
                 'models': [strip(m) for m in self.current['models']],
                 'maps': [{**x, 'files': [strip(f) for f in x['files']]} for x in self.current.get('maps', [])],
-                'address_indexes': [{**x, 'files': [strip(f) for f in x['files']]} for x in self.current.get('address_indexes', [])]}
+                'address_indexes': [{**x, 'files': [strip(f) for f in x['files']]} for x in self.current.get('address_indexes', [])],
+                'addons': [{**x, 'files': [strip(f) for f in x['files']]} for x in self.current.get('addons', [])]}

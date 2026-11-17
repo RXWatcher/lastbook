@@ -20,7 +20,7 @@ import uuid
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
-from . import download, hardware, install
+from . import addons as addon_merge, download, hardware, install
 from .manifest import Manifest
 
 DATA_NAME = install.DATA_NAME
@@ -174,14 +174,18 @@ class Setup:
             return None
         if (plan.get('pack') and not pack) or (plan.get('map') and not mp) or (plan.get('model') and not model):
             return None
+        extras = [self.manifest.addon((a or {}).get('id')) for a in (plan.get('addons') or [])]
+        if not all(extras):
+            return None
         wanted = {('pack', pack['id']) if pack else None, ('map', mp['id']) if mp else None, ('model', model['id']) if model else None, ('addresses', addresses['id']) if addresses else None} - {None}
+        wanted |= {('addon', a['id']) for a in extras}
         if {(i.get('kind'), i.get('id')) for i in items} != wanted:
             return None
-        names = ([f['name'] for f in pack['files']] if pack else []) + ([f['name'] for f in mp['files']] if mp else []) + ([f['name'] for f in addresses['files']] if addresses else []) + ([model['file']] if model else [])
+        names = ([f['name'] for f in pack['files']] if pack else []) + ([f['name'] for f in mp['files']] if mp else []) + ([f['name'] for f in addresses['files']] if addresses else []) + ([model['file']] if model else []) + [f['name'] for a in extras for f in a['files']]
         sources = {n: str(v) for n, v in (plan.get('sources') or {}).items()
                    if n in names and isinstance(v, str) and Path(v).name == n and Path(v).is_file()}
         switch = bool(plan.get('switch')) and pack is not None
-        clean = {'pack': pack, 'model': model, 'map': mp, 'addresses': addresses, 'parent': str(parent), 'target': str(target), 'work': str(work),
+        clean = {'pack': pack, 'model': model, 'map': mp, 'addresses': addresses, 'addons': extras, 'parent': str(parent), 'target': str(target), 'work': str(work),
                  'sources': sources, 'explicit': bool(plan.get('explicit')), 'retried': {}, 'switch': switch, 'repair': bool(plan.get('repair'))}
         if isinstance(plan.get('damaged'), list):
             clean['damaged'] = [str(x) for x in plan['damaged']]
@@ -218,6 +222,8 @@ class Setup:
             plan_files = plan['map']['files']
         elif it['kind'] == 'addresses' and plan.get('addresses'):
             plan_files = plan['addresses']['files']
+        elif it['kind'] == 'addon':
+            plan_files = [f for a in plan.get('addons') or [] if a['id'] == it['id'] for f in a['files']]
         else:
             plan_files = [{'name': plan['model']['file']}] if plan.get('model') else []
         n = 0
@@ -266,7 +272,15 @@ class Setup:
             p = self.current / 'models' / m['file']
             if p.is_file() and p.stat().st_size == m['size']:
                 model = m['id']
-        return {'folder': str(self.current), 'pack': pack, 'content_revision': revision, 'map_bytes': install.map_bytes(self.current), 'model': model, 'map': install.map_name(self.current), 'address_indexes': self.address_indexes(), 'old': self._settings().get('old', [])}
+        return {'folder': str(self.current), 'pack': pack, 'content_revision': revision, 'map_bytes': install.map_bytes(self.current), 'model': model, 'map': install.map_name(self.current), 'address_indexes': self.address_indexes(), 'add_ons': self.add_ons(), 'old': self._settings().get('old', [])}
+
+    def add_ons(self):
+        """Names of the add-ons in the open library (pack.json add_ons, written by engine/setup/addons.py)."""
+        try:
+            meta = json.loads((Path(self.current) / 'pack.json').read_text(encoding='utf-8'))
+            return [a['name'] for a in meta.get('add_ons', []) if isinstance(a, dict) and isinstance(a.get('name'), str)]
+        except (OSError, ValueError, TypeError, AttributeError):
+            return []
 
     def address_indexes(self):
         if not self.current:
@@ -303,7 +317,7 @@ class Setup:
         m = self.manifest.model()
         if m:
             files[m['file']] = ('model', m['id'], m['size'])
-        for kind, key in (('map', 'maps'), ('addresses', 'address_indexes')):
+        for kind, key in (('map', 'maps'), ('addresses', 'address_indexes'), ('addon', 'addons')):
             for x in self.manifest.current.get(key, []):
                 for f in x['files']:
                     files[f['name']] = (kind, x['id'], f['size'])
@@ -493,7 +507,7 @@ class Setup:
             srcs = dict(self.sources)
             srcs.update(sources or {})
             for f in self.found():
-                if f.get('size_ok') and f['name'] not in srcs and f['kind'] in ('pack', 'model', 'map', 'addresses'):
+                if f.get('size_ok') and f['name'] not in srcs and f['kind'] in ('pack', 'model', 'map', 'addresses', 'addon'):
                     srcs[f['name']] = f['path']
             # A local-only map or address index (a region whose files Lastbook's site does not host) is used from a file on this
             # computer, never downloaded. A map asked for without its file stops here; a missing local-only index is skipped.
@@ -503,9 +517,14 @@ class Setup:
                 if requested_address:
                     return {'error': f'Put {_local_missing(addresses, srcs)} in {self.default_parent}, then open setup again.', 'code': 'local_only'}
                 addresses = None
-            names = ([f['name'] for f in pack['files']] if pack else []) + ([model['file']] if model else []) + ([f['name'] for f in mp['files']] if mp else []) + ([f['name'] for f in addresses['files']] if addresses else [])
+            # documents that go with the map being installed (engine/setup/addons.py): only from a file on this computer, and only
+            # when the library does not have them yet; one that is not here is skipped
+            with_map = (mp or {}).get('id') or (pack or {}).get('map')
+            extras = [a for a in self.manifest.current.get('addons', []) if with_map and a.get('with_map') == with_map and a['available']
+                      and (pack or a['id'] not in cur.get('add_ons', [])) and not _local_missing(a, srcs)]
+            names = ([f['name'] for f in pack['files']] if pack else []) + ([model['file']] if model else []) + ([f['name'] for f in mp['files']] if mp else []) + ([f['name'] for f in addresses['files']] if addresses else []) + [f['name'] for a in extras for f in a['files']]
             have = set(srcs)
-            need = install.need_bytes(pack, model, have) + _map_need(mp, have) + _map_need(addresses, have)
+            need = install.need_bytes(pack, model, have) + _map_need(mp, have) + _map_need(addresses, have) + sum(_map_need(a, have) for a in extras)
             preserve_map = bool(pack and cur.get('pack') == pack['id'] and target == self.current and not mp and cur.get('map') not in (None, 'base'))
             if preserve_map:
                 need += cur['map_bytes']
@@ -531,12 +550,15 @@ class Setup:
             if addresses:
                 items.append({'id': addresses['id'], 'kind': 'addresses', 'title': addresses['title'] + ' address search', 'state': 'waiting', 'bytes_done': 0,
                               'bytes_total': addresses['download_bytes'], 'rate_bps': 0, 'eta_s': None, 'error': None})
+            for a in extras:       # after the map and the pack: it goes into the library they make
+                items.append({'id': a['id'], 'kind': 'addon', 'title': a['title'], 'state': 'waiting', 'bytes_done': 0,
+                              'bytes_total': a['download_bytes'], 'rate_bps': 0, 'eta_s': None, 'error': None})
             if model:
                 items.append({'id': model['id'], 'kind': 'model', 'title': model['title'], 'state': 'waiting', 'bytes_done': 0,
                               'bytes_total': model['size'], 'rate_bps': 0, 'eta_s': None, 'error': None})
             self.job = {'id': uuid.uuid4().hex[:12], 'state': 'waiting', 'items': items, 'error': None, 'started': _now(),
                         'folder': str(target),
-                        'plan': {'pack': pack, 'model': model, 'map': mp, 'addresses': addresses, 'parent': str(parent), 'target': str(target), 'work': str(work),
+                        'plan': {'pack': pack, 'model': model, 'map': mp, 'addresses': addresses, 'addons': extras, 'parent': str(parent), 'target': str(target), 'work': str(work),
                                  'sources': {k: v for k, v in srcs.items() if k in names}, 'explicit': explicit,
                                  'retried': {}, 'switch': bool(pack)}}
             s = self._settings()
@@ -857,6 +879,8 @@ class Setup:
                     self._do_map(it, plan, work, control)
                 elif it['kind'] == 'addresses':
                     self._do_addresses(it, plan, work, control)
+                elif it['kind'] == 'addon':
+                    self._do_addon(it, plan, work, control)
                 else:
                     self._do_model(it, plan, work, control)
                 with self.lock:
@@ -1045,6 +1069,27 @@ class Setup:
             if ours:
                 os.unlink(path)
 
+    def _do_addon(self, it, plan, work, control):
+        """Documents that go with the map (engine/setup/addons.py): checked against the manifest's SHA-256 like any file, then put into
+        the library this job makes, or the open one. The person's own file is left where it was."""
+        entry = next(a for a in plan.get('addons') or [] if a['id'] == it['id'])
+        got = []
+        offset = 0
+        for file in entry['files']:
+            path, ours = self._get_file(it, file, plan, work, control, offset)
+            got.append((path, ours))
+            offset += file['size']
+        self._set(it, 'activating')
+        target = work / 'unpack' / DATA_NAME if plan['switch'] else Path(plan['target'])
+        for path, _ in got:
+            try:
+                addon_merge.add(target, path)
+            except addon_merge.Refused as e:
+                raise install.Refused('unpack', f'The documents could not be added: {e}')
+        for path, ours in got:
+            if ours:
+                os.unlink(path)
+
     def _do_model(self, it, plan, work, control):
         m = plan['model']
         path, ours = self._get_file(it, {'name': m['file'], 'url': m['url'], 'size': m['size'], 'sha256': m['sha256']}, plan, work, control, 0)
@@ -1126,6 +1171,8 @@ def _tag_sources(job):
             names = [f['name'] for f in plan['map']['files']]
         elif it['kind'] == 'addresses' and plan.get('addresses'):
             names = [f['name'] for f in plan['addresses']['files']]
+        elif it['kind'] == 'addon':
+            names = [f['name'] for a in plan.get('addons') or [] if a['id'] == it['id'] for f in a['files']]
         elif it['kind'] == 'model' and plan.get('model'):
             names = [plan['model']['file']]
         else:

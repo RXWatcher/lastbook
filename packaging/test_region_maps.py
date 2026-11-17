@@ -135,6 +135,22 @@ class RegionMaps(unittest.TestCase):
         self.assertEqual(m['maps'][0]['title_in_text'], 'the Netherlands')
         self.assertEqual(maps['files'][0]['url'], 'https://downloads.lastbook.org/maps/Lastbook-Map-NL.zip')
 
+    def test_package_lists_an_addon_with_its_map(self):
+        dest = self.tmp / 'NL'
+        region_maps.assemble('NL', self.src, dest)
+        addon = self.tmp / 'Lastbook-Addon-NL-Test.zip'
+        with zipfile.ZipFile(addon, 'w') as z:
+            z.writestr('LastbookData/pack.json', json.dumps({'name': 'nl-test'}))
+            z.writestr('LastbookData/library-data/catalog.json', '[]')
+        maps, addresses, extra = region_maps.package('NL', dest, self.src / 'addresses' / 'NL.sqlite', self.tmp / 'zips', addon=addon)
+        self.assertEqual((extra['id'], extra['kind'], extra['with_map'], extra['local_only']), ('nl-test', 'addon', 'NL', True))
+        self.assertTrue((self.tmp / 'zips' / addon.name).is_file())
+        m = manifest.validate({'version': 1, 'maps': [maps], 'address_indexes': [addresses], 'addons': [extra]})
+        self.assertEqual(m['addons'][0]['with_map'], 'NL')
+        path = self.tmp / 'release' / 'manifest-v1.json'
+        region_maps.list_in_manifest(path, maps, addresses, extra)
+        self.assertEqual([x['id'] for x in json.loads(path.read_text())['addons']], ['nl-test'])
+
     def test_merge_into_manifest(self):
         dest = self.tmp / 'NL'
         region_maps.assemble('NL', self.src, dest)

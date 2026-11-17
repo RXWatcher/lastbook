@@ -286,6 +286,8 @@
     if (sel && sel.local_only && !mapIncluded) hint = localMissing(selected)
       ? `Put Lastbook-Map-${esc(selected)}.zip (and Lastbook-Addresses-${esc(selected)}.zip for address search) in ${esc(home(S.found_folder || ''))}, then reopen setup.`
       : `Found on this computer · ${size(disk)} on disk. Nothing to download.`;
+    const docs = sel && ((S.manifest && S.manifest.addons) || []).find(x => x.with_map === sel.id && x.available !== false && foundFor('addon', x.id));
+    if (docs && !localMissing(selected) && !((cur() || {}).add_ons || []).includes(docs.id)) hint += ` ${esc(docs.title)}: added too.`;
     box.innerHTML = `<h2>${ico('map')}Your local map</h2>
       <p class="s-mapnote">Local streets, buildings, water and places to get help. Available offline.</p>
       ${now === 'us' ? '<p class="s-mapnote">All includes every state map. Choose your state for offline street-address search.</p>' : ''}
@@ -413,6 +415,7 @@
                   model: [['downloading', 'Download'], ['verifying', 'Check'], ['activating', 'Finish']] };
   STEPS.map = [['downloading', 'Download'], ['unpacking', 'Unpack']];   // the engine's map item: waiting, downloading, unpacking, done
   STEPS.addresses = STEPS.map;
+  STEPS.addon = [['verifying', 'Check'], ['activating', 'Add']];   // documents that go with a map: a file on this computer, checked, then added
   const WORD = { waiting: 'Waiting', downloading: 'Downloading', paused: 'Paused', verifying: 'Checking', unpacking: 'Unpacking', activating: 'Finishing', done: 'Done', failed: 'Stopped' };
   const ACTIVE = new Set(['waiting', 'downloading', 'verifying', 'unpacking', 'activating']);
   let shapeKey = '', lastAct = null;   // lastAct: the button just pressed, so focus lands on what replaced it
