@@ -280,7 +280,7 @@
     const bytes = (sel && !mapIncluded ? packDl(sel) : 0) + (a ? packDl(a) : 0);
     const disk = (sel && !mapIncluded ? sel.installed_bytes || 0 : 0) + (a ? a.installed_bytes || 0 : 0);
     const unavailable = selected && addresses().length && (!addressById(selected) || addressById(selected).available === false);
-    let hint = !sel ? `Select your ${placeWord()} to continue.` : bytes ? `${size(bytes)} download · ${size(disk)} on disk${mapIncluded && a ? '. Your map is already included; only the address index downloads.' : ''}` : 'Your state map and available address index are already included.';
+    let hint = !sel ? `Select your ${placeWord()} to continue.` : bytes ? `${size(bytes)} download · ${size(disk)} on disk${mapIncluded && a ? '. Your map is already included; only the address index downloads.' : ''}` : `Your ${sel.kind === 'country' ? '' : 'state '}map and available address index are already included.`;
     if (unavailable) hint = (bytes ? `${size(bytes)} download · ${size(disk)} on disk.` : 'Your state map is already included.') + ' Street-address search is not available for this state yet.';
     if (sel && sel.local_only && !mapIncluded) hint = localMissing(selected)
       ? `Put Lastbook-Map-${esc(selected)}.zip (and Lastbook-Addresses-${esc(selected)}.zip for address search) in ${esc(home(S.found_folder || ''))}, then reopen setup.`
