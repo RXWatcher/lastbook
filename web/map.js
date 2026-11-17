@@ -768,7 +768,8 @@ const MapView = (() => {
     }
     return st ? elevAt(lat, lon) : null;
   }
-  const fmtElev = m => metric() ? (Math.abs(m) < 10 ? (Math.round(m * 10) / 10) : Math.round(m)).toLocaleString('en').replace('-', '−') + ' m' + (m < 0 ? ' (below sea level)' : '')
+  const metres = m => { const v = (Math.abs(m) < 10 ? Math.round(m * 10) / 10 : Math.round(m)) || 0; return v.toLocaleString('en').replace('-', '−') + ' m' + (v < 0 ? ' (below sea level)' : '') };   // || 0: never "−0 m"
+  const fmtElev = m => metric() ? metres(m)
     : `${Math.round(m * 3.28084).toLocaleString()} ft (${Math.round(m).toLocaleString()} m)`;
 
   // ------------------------------------------------------------------ card ----
