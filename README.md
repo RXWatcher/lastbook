@@ -23,7 +23,7 @@ instead of a US state and you get:
 | What | From | Licence | In the build of 17 Nov 2026 |
 |---|---|---|---|
 | Streets, land use, water, rail, place names, coast | OpenStreetMap (Geofabrik `netherlands-latest.osm.pbf`, osmdata coastline polygons) | ODbL 1.0 | 5,563,556 map features |
-| Help points: hospitals (marked when they have an emergency department, SEH), out-of-hours GP posts (huisartsenposten), defibrillators (AED), emergency assembly points, pharmacies, fire, police, drinking water, shelters, supermarkets, fuel | OpenStreetMap | ODbL 1.0 | 77,924 points, including 4,363 AEDs and 75 SEH hospitals |
+| Help points: hospitals (marked when they have an emergency department, SEH), out-of-hours GP posts (huisartsenposten), defibrillators (AED), emergency assembly points, pharmacies, fire, police, drinking water, shelters, supermarkets, fuel | OpenStreetMap; huisartsenposten also from Wikidata (CC0 1.0) | ODbL 1.0 | 77,983 points, including 4,363 AEDs, 75 SEH hospitals and 119 huisartsenposten |
 | Building outlines | Kadaster BAG (`bag-light.gpkg`, PDOK) | CC0 1.0 | 11,297,049 buildings |
 | Address search: postcode and house number (`1012 LG 1`), street first (`Damrak 1 Amsterdam`), a postcode alone (`3511 AA`), any house-number addition (`12A`, `12-2`, `2-III`, `2 hs`) | Kadaster BAG | CC0 1.0 | 9,706,576 addresses |
 | Elevation, relief, contours in metres, heights below sea level | AHN4 terrain model (Rijkswaterstaat, PDOK WCS), at 1 arc-second | CC0 1.0 | the whole country; the Zuidplaspolder reads −4.5 m |
@@ -157,7 +157,10 @@ Netherlands only from the files.
 
 ### What is not there yet
 
-- **Out-of-hours GP posts are thin.** OpenStreetMap has about 40 of the roughly 115. Call 112 or your own GP's number.
+- **Out-of-hours GP posts may be out of date.** The map has 119 points: 61 from OpenStreetMap and 58 from Wikidata, whose list
+  dates from 2018 and 2019. RIVM counts about 101 today, so a few points may be closed or moved, or doubled. RIVM's own list
+  has no licence that allows reuse. Call 112 or your own GP's number. Emergency departments are as tagged in OpenStreetMap
+  (75, RIVM counts 79), and a few hospitals with one are not marked.
 - **Secondary addresses** (BAG nevenadressen) are not in the BAG file used, so they cannot be searched.
 - **No flood layers** yet: primary flood defences, flood-risk maps. They need a new kind of map layer.
 - **No Dutch guides or documents** yet. The guides are upstream's, US-based but mostly general (water, first aid, food,
