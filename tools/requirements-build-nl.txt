@@ -1,0 +1,9 @@
+# Build machine only: the tools that make the Netherlands map set (tools/build_map_osm.py, build_bag.py, build_places_nl.py,
+# fetch_ahn.py, build_crops_nl.py, build_terrain.py). Never part of the app.
+#   python3.11 -m venv derived/buildenv && derived/buildenv/bin/pip install -r tools/requirements-build-nl.txt
+numpy==2.4.6
+tifffile==2026.3.3      # the last release that supports Python 3.11
+pyproj==3.7.2           # the last release that supports Python 3.11
+osmium==4.3.2
+Pillow==13.0.0
+pyshp==3.1.6
