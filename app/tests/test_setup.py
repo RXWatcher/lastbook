@@ -1247,6 +1247,28 @@ class RegionMaps(Maps):
         self.assertIsNone(note.get('error'))
         self.assertEqual(install.map_name(lib), 'NL')
 
+    def test_local_only_wrong_file(self):
+        """A file of the right name and size that is not the published one: say to replace it, never offer to download it."""
+        mf, zpath = self.nl_manifest()
+        self.parent.mkdir(parents=True, exist_ok=True)
+        placed = self.parent / zpath.name
+        data = bytearray(zpath.read_bytes())
+        data[-1] ^= 0xFF
+        placed.write_bytes(bytes(data))
+        s = self.setup('manage', current=self.manage_library(), manifest=mf)
+        with mock.patch.object(download, 'Download', side_effect=AssertionError('a local-only map must never be downloaded')):
+            s.use(str(placed))
+            j = self.wait(s)
+            self.assertEqual(j['state'], 'failed')
+            self.assertEqual(j['error']['code'], 'found_mismatch')
+            self.assertTrue(j['error'].get('local_only'))
+            self.assertIn('Replace it with the right file', j['error']['message'])
+            self.assertNotIn('Download', j['error']['message'])
+            s.retry()                                   # what the screen's button does: still no download, and no false "gone"
+            j = self.wait(s)
+            self.assertEqual(j['state'], 'failed')
+            self.assertNotIn('no longer where it was', j['error']['message'])
+
     def test_state_names_the_found_folder(self):
         mf, _ = self.nl_manifest()
         self.assertEqual(self.setup(manifest=mf).state()['found_folder'], str(self.parent))

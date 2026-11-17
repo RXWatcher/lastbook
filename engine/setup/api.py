@@ -903,13 +903,18 @@ class Setup:
             plan['sources'].pop(name, None)       # a retry downloads it instead; the file itself is left where it is, untouched
             it['source'] = 'download'
             plan['explicit'] = False
+            folder = Path(src).parent.name or str(Path(src).parent)
+            if _local_only(plan, f):      # nothing to download it from: the person has to put the right file there
+                raise download.Failed('found_mismatch', f'The {name} in {folder} doesn’t match the file Lastbook expects, so it was not used. '
+                                                        'It was left as it is. Replace it with the right file, then choose again.',
+                                      file=src, local_only=True)
             if explicit_use:
-                folder = Path(src).parent.name or str(Path(src).parent)
                 raise download.Failed('found_mismatch', f'The {name} in {folder} doesn’t match the published file, so it was not used. '
                                                         'It was left as it is. Download it instead?', file=src)
             print(f'setup: {src} does not match; downloading instead', flush=True)
-        if any(e and e.get('local_only') and f in e['files'] for e in (plan.get('map'), plan.get('addresses'))):
-            raise download.Failed('local_only', f'{name} is no longer where it was. Put it in {self.default_parent}, then try again.')
+        if _local_only(plan, f):
+            raise download.Failed('local_only', f'{name} was not found on this computer, or is not the file Lastbook expects. '
+                                                f'Put the right file in {self.default_parent}, then try again.')
         dest = work / 'downloads' / name
         if not dest.exists():       # room for what is still to come (the space check at start counted a file already here as had)
             try:
@@ -1097,6 +1102,11 @@ def path_too_deep(target, windows=None):
 def _place_word(entry):
     """How the person's choice is named in a message: a US state, or a country."""
     return 'country' if entry and entry.get('kind') == 'country' else 'state'
+
+
+def _local_only(plan, f):
+    """Whether this file belongs to a local-only map or address index in the job's plan."""
+    return any(e and e.get('local_only') and f in e['files'] for e in (plan.get('map'), plan.get('addresses')))
 
 
 def _local_missing(entry, sources):

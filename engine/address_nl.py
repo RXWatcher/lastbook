@@ -103,7 +103,7 @@ def _postcode_streets(connections, postcode, limit):
              'lat': lat, 'lon': lon, 'source': 'Kadaster BAG', 'onMap': True} for street, city, lo, hi, lat, lon in out[:limit]]
 
 
-def _rows(connections, c, limit):
+def _rows(connections, c, limit, near=None):
     conditions, params = ['num = ?'], [c['number']]
     if c['postcode']:
         conditions.append('postcode = ?')
@@ -114,12 +114,17 @@ def _rows(connections, c, limit):
     if c['city']:
         conditions.append('city_norm LIKE ?')
         params.append(c['city'] + '%')
+    order, extra = 'length(norm), norm', []
+    if near:      # a common street (Kerkstraat 5 is in hundreds of towns): the nearest first, before the row limit cuts any off
+        k = math.cos(math.radians(near[0]))
+        order = 'length(norm), (lat - ?) * (lat - ?) + ((lon - ?) * ?) * ((lon - ?) * ?)'
+        extra = [near[0], near[0], near[1], k, near[1], k]
     sql = ('SELECT postcode, num, letter, addition, street, norm, city, lat, lon FROM nl_addr WHERE ' + ' AND '.join(conditions)
-           + ' ORDER BY length(norm), norm LIMIT ?')
+           + f' ORDER BY {order} LIMIT ?')
     rows = []
     for db in connections:
         try:
-            rows += db.execute(sql, [*params, limit * 20]).fetchall()
+            rows += db.execute(sql, [*params, *extra, limit * 20]).fetchall()
         except sqlite3.Error:
             continue
     return rows
@@ -143,7 +148,7 @@ def find(query, paths, limit=8, near=None):
                 if hits:
                     return hits
                 continue
-            rows = _rows(connections, c, limit)
+            rows = _rows(connections, c, limit, near)
             want = c['suffix']
             keyed = [(_suffix((r[2] or '') + (r[3] or '')), r) for r in rows]
             if want:

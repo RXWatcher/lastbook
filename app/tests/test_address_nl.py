@@ -100,6 +100,18 @@ class DutchAddresses(unittest.TestCase):
         self.assertEqual(self.find('Damrak 1Z'), [])
         self.assertEqual(self.find('Damrak 99'), [])
 
+    def test_near_ranks_before_the_cut(self):
+        """A common street (Kerkstraat 5 is in hundreds of towns): the house nearest the map must be found, not cut off by the row
+        limit before distance is looked at."""
+        db = sqlite3.connect(self.nl)
+        rows = [(f'9{i:03d}AA', 5, '', '', 'Kerkstraat', 'kerkstraat', f'Dorp {i}', f'dorp {i}', 53.0 + i / 1000, 6.5) for i in range(300)]
+        rows.append(('5611GH', 5, '', '', 'Kerkstraat', 'kerkstraat', 'Eindhoven', 'eindhoven', 51.44, 5.47))
+        db.executemany('INSERT INTO nl_addr VALUES (?,?,?,?,?,?,?,?,?,?)', rows)
+        db.commit()
+        db.close()
+        r = self.find('Kerkstraat 5', near=(51.44, 5.47))
+        self.assertEqual(r[0]['detail'], '5611 GH Eindhoven')
+
     def test_indexes_by_style(self):
         make_us_index(self.geo / 'addresses' / 'DC.sqlite')
         self.assertEqual(address_search.indexes(self.geo, 'nl'), [self.nl])

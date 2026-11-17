@@ -423,6 +423,7 @@
     const T = {
       found_mismatch: (() => {   // a file of the person's own that did not match: nothing was downloaded, and their file is left alone
         const f = String((e && e.file) || ''), name = f.split(/[\\/]/).pop() || 'file', at = f.split(/[\\/]/).slice(-2, -1)[0];
+        if (e && e.local_only) return [`The ${esc(name)}${at ? ' in ' + esc(at) : ''} doesn’t match the file Lastbook expects, so it was not used.`, 'It was left as it is. Replace it with the right file, then choose again.', 'back'];
         return [`The ${esc(name)}${at ? ' in ' + esc(at) : ''} doesn’t match the published file, so it was not used.`, 'It was left as it is. Download it instead?', 'download'];
       })(),
       no_space: [`Not enough room on ${esc(diskName(d))}${e && e.need_bytes ? `: this needs ${size(e.need_bytes)}, and ${size(e.free_bytes)} is free` : ''}.`, 'Free some space, then retry, or go back and choose less.', 'retry'],
