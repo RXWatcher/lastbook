@@ -18,7 +18,6 @@ import subprocess
 import sys
 import time
 import urllib.request
-import zipfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -40,13 +39,11 @@ NAMES = dict(AL='Alabama', AK='Alaska', AZ='Arizona', AR='Arkansas', CA='Califor
              SC='South Carolina', SD='South Dakota', TN='Tennessee', TX='Texas', UT='Utah', VT='Vermont', VA='Virginia', WA='Washington',
              WV='West Virginia', WI='Wisconsin', WY='Wyoming')
 INCLUDES = 'Local streets, buildings, terrain and crops, plus water, help and resource points'
-ALLOWED = {f'derived/geo/{n}.sqlite' for n in ('national', 'map', 'water', 'terrain', 'buildings', 'crops', 'places')} | {
-    'derived/geo/national-status.json', 'derived/geo/socal-cells.json', 'library-data/geography/resources/atlas.sqlite', 'map-set.json'}
-STORED = {'derived/geo/terrain.sqlite'}     # tiles are already compressed
 
 sys.path.insert(0, str(ROOT / 'packaging'))
 sys.path.insert(0, str(ROOT / 'derived/release'))
 import scan_pack as S       # noqa: E402
+from map_sets import ALLOWED, make_zip   # noqa: E402  (the map-set contract, shared with region_maps.py)
 import r2_publish as R      # noqa: E402
 
 
@@ -144,24 +141,6 @@ def web_text(d):
                     notes[f'{p.relative_to(d).name}:{t}.{c}'] = n
         db.close()
     return fails, notes
-
-
-def make_zip(d, out):
-    tmp = out.with_suffix('.partial')
-    with zipfile.ZipFile(tmp, 'w', allowZip64=True) as z:
-        for rel in sorted(ALLOWED):
-            how = zipfile.ZIP_STORED if rel in STORED else zipfile.ZIP_DEFLATED
-            zi = zipfile.ZipInfo(rel, date_time=(2026, 11, 12, 0, 0, 0))
-            zi.compress_type = how
-            zi.external_attr = 0o644 << 16
-            with open(d / rel, 'rb') as src, z.open(zi, 'w', force_zip64=True) as dst:
-                while b := src.read(1 << 24):
-                    dst.write(b)
-    with zipfile.ZipFile(tmp) as z:
-        names = {i.filename: i.file_size for i in z.infolist()}
-    if names != {rel: (d / rel).stat().st_size for rel in ALLOWED}:
-        sys.exit('zip does not hold exactly the set')
-    os.replace(tmp, out)
 
 
 def upload(ctx, path, key):
