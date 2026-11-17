@@ -40,8 +40,34 @@ Every source, licence and check, and what was left out and why, is in [docs/REGI
 
 ### Getting it running
 
-Lastbook's website does not host the Netherlands map, and the released apps do not know about it. You build the map files
-once and run Lastbook from source. Tested on an Apple Silicon Mac (macOS); the tools are plain Python and should run on
+Lastbook's website does not host the Netherlands map, and the released apps do not know about it, so Lastbook runs from
+source. The map files can be downloaded ready-made from this fork's release (the quick way), or built from the open data.
+
+#### The quick way: download the map files
+
+The release [nl-map-2026-11-17](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17) holds the files built on 17 November 2026
+(OpenStreetMap data as of 16 November 2026, BAG of 1 November 2026, BRP 2025). It has the two zips (0.9 GB and 0.4 GB), the
+manifest entries that let setup check them (`NL-entries.json`), and `SHA256SUMS`.
+
+```bash
+git clone https://github.com/RXWatcher/lastbook.git && cd lastbook
+python3.11 -m venv .venv
+.venv/bin/pip install -r packaging/requirements_macos.txt     # Windows: packaging/requirements_app.txt; Linux: packaging/linux/requirements_linux.txt
+mkdir -p nl && cd nl
+curl -fLO https://github.com/RXWatcher/lastbook/releases/download/nl-map-2026-11-17/Lastbook-Map-NL.zip
+curl -fLO https://github.com/RXWatcher/lastbook/releases/download/nl-map-2026-11-17/Lastbook-Addresses-NL.zip
+curl -fLO https://github.com/RXWatcher/lastbook/releases/download/nl-map-2026-11-17/NL-entries.json
+curl -fLO https://github.com/RXWatcher/lastbook/releases/download/nl-map-2026-11-17/SHA256SUMS && shasum -a 256 -c SHA256SUMS
+cd ..
+.venv/bin/python packaging/region_maps.py manifest NL --entries nl/NL-entries.json
+.venv/bin/python packaging/region_maps.py dev-manifest
+```
+
+Then do steps 6 and 7 below: move the two zips to the folder setup looks in, and run Lastbook.
+
+#### The full way: build the map files
+
+Build the map files once from the open data. Tested on an Apple Silicon Mac (macOS); the tools are plain Python and should run on
 Linux too. Plan on about 13 GB of downloads (16 GB once unpacked), about 25 GB of free disk for the sources and the build, and about
 25 minutes of build time on a recent Mac, plus the library you choose in setup.
 
@@ -73,7 +99,7 @@ unzip -q water-polygons-split-4326.zip && unzip -q land-polygons-split-4326.zip
 cd ../../..
 ```
 
-**4. Build the map files** into `derived/geo-nl/` (elevation is fetched from PDOK's AHN service by `fetch_ahn.py`, 221 MB):
+**4. Build the map files** into `derived/geo-nl/` (elevation is fetched from PDOK's AHN service by `fetch_ahn.py`, about 220 MB):
 
 ```bash
 B=derived/buildenv/bin/python; S=derived/sources/nl; G=derived/geo-nl; BOX=3.2,50.7,7.3,53.7
@@ -163,7 +189,7 @@ Netherlands only from the files.
 | macOS (Apple Silicon, macOS 14 or later) | 1.1.11 | Live on lastbook.org, signed and notarized |
 | Windows (64-bit, Windows 10 or later) | 1.1.11 | Live on lastbook.org, Authenticode signed |
 | Linux (Ubuntu 24.04 or 26.04 LTS, x86_64) | 1.1.11 | Ubuntu packages; installation instructions below |
-| Netherlands map (this fork) | source | Run from source with a map set you build; see [Lastbook for the Netherlands](#lastbook-for-the-netherlands) |
+| Netherlands map (this fork) | source | Run from source with the map files from release [nl-map-2026-11-17](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17) or built yourself; see [Lastbook for the Netherlands](#lastbook-for-the-netherlands) |
 
 ## iPad (development preview, source only)
 

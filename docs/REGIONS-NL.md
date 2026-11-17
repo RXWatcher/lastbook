@@ -80,8 +80,10 @@ Notes:
 - **Elevation at 1 arc-second, not 0.5 m.**
   - The map's terrain tiles stop at zoom 12, about 24 m a pixel at 52° N. Finer data would not show.
   - The full 0.5 m sheets are about 455 GB (the sum of PDOK's sheet index). The 1 arc-second fetch is 221 MB.
-  - A terrain model has holes where buildings and water were. `tools/fetch_ahn.py` fills holes up to about a kilometre
-    across from the ground around them, so polders show their real depth below sea level. Larger water draws at 0 m.
+  - A terrain model has holes where buildings and water were. `tools/fetch_ahn.py` fills a hole only when there is ground
+    on both sides within 64 cells (about 1.2 km across, 2 km down): buildings, canals and ditches. Polders then show their
+    real depth below sea level. Open water and anything wider stays empty and draws at 0 m, so heights are never spread out
+    over the sea.
   - The service answers HTTP 400 ("ExtentError") for an area wholly outside AHN; that is read as no data.
 - **Municipalities and provinces come from OpenStreetMap, not Kadaster.**
   - Kadaster's boundaries (Bestuurlijke Gebieden) are CC0 as a download only up to 2021; municipalities have merged since.
@@ -205,9 +207,9 @@ Built on 17 November 2026 on an Apple Silicon Mac (10 cores, 32 GB) from the sou
 | `build_bag.py` | 9,706,576 addresses; 11,297,049 buildings | 5.5 min |
 | `build_places_nl.py` | 67,160 names; 2,505 BAG towns and villages, all with a province, all but 2 with a municipality | 3 s |
 | `fetch_ahn.py` | 15 of 20 one-degree cells have AHN data; 221 MB | 2 min |
-| `build_terrain.py` | 1,798 tiles, zoom 4 to 12 | 10 s |
+| `build_terrain.py` | 1,689 tiles, zoom 4 to 12 | 5 s |
 | `build_crops_nl.py` | 16,207 parcels; 6,013 clickable cells | 45 s |
-| `region_maps.py build NL` | map set 1,792,266,302 bytes; `Lastbook-Map-NL.zip` 912,410,066 bytes; `Lastbook-Addresses-NL.zip` 384,766,252 bytes | 1.5 min |
+| `region_maps.py build NL` | map set 1,789,935,678 bytes; `Lastbook-Map-NL.zip` 910,079,442 bytes; `Lastbook-Addresses-NL.zip` 384,766,252 bytes | 1.5 min |
 
 Help points in the map, by class:
 
@@ -261,7 +263,9 @@ Setup's map choice lists the Netherlands under "Countries", above the 52 US stat
 - **Dutch guides and documents.** The English Denk vooruit booklet and emergency kit list (Rijksoverheid, text CC0, images
   excluded; opened) belong in a library add-on pack, with guides pointing at their pages.
 - **Building heights** for the 3D view (3D BAG, CC BY 4.0).
-- **Hosting.** Lastbook's site does not host the Netherlands zips; their manifest entries are marked `local_only`.
+- **Hosting.** Lastbook's site does not host the Netherlands zips; their manifest entries are marked `local_only`. This
+  fork publishes the zips of this build as a GitHub release ([nl-map-2026-11-17](https://github.com/RXWatcher/lastbook/releases/tag/nl-map-2026-11-17)),
+  for people who want to install them without building.
 - **Caribbean Netherlands**, as its own region.
 
 ## What was checked, and what was not
