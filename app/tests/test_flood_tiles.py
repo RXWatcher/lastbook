@@ -59,6 +59,22 @@ class FloodTiles(unittest.TestCase):
     def tile(self, want, z=Z):
         return json.loads(server.flood_tile(z, X, Y, want))
 
+    def test_a_failed_query_is_not_kept_as_no_flooding(self):
+        """A database that cannot be read (being rebuilt, damaged) gives no tile, not an empty one that is then cached as dry land."""
+        broken = self.tmp / 'broken.sqlite'
+        sqlite3.connect(broken).close()
+        with patch.object(server, 'WATERDB', broken):
+            self.assertIsNone(server.flood_tile(Z, X, Y, 't100'))
+        self.assertTrue(self.tile('t100')['layers'])
+
+    def test_the_cache_is_bounded(self):
+        self.assertLessEqual(server._flood_tile.cache_info().maxsize, 128)
+
+    def test_a_tile_outside_the_world_is_empty_and_not_cached(self):
+        before = server._flood_tile.cache_info().currsize
+        self.assertEqual(json.loads(server.flood_tile(3, 8, 0, 't100')), {'z': 3, 'layers': {}})
+        self.assertEqual(server._flood_tile.cache_info().currsize, before)
+
     def test_scenario_and_dike(self):
         layers = self.tile('t100,dike')['layers']
         self.assertEqual([(c, n) for c, n, _ in layers['flood']], [('t100-3', 'between 1.0 and 1.5 m deep')])

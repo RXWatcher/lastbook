@@ -953,10 +953,15 @@ def flood_tile(z, x, y, want):
     of 'dike' and scenario names (t10, t100, t1000, t10000); anything else is ignored. They have their own tiles so the base tile
     stays the same size and the map can switch them without refetching it."""
     toks = sorted({w for w in want.split(',') if w == 'dike' or w in FLOOD_SCENARIOS})
-    return _flood_tile(z, x, y, ','.join(toks), data_version())
+    if not (0 <= x < 2 ** z and 0 <= y < 2 ** z):
+        return json.dumps({'z': z, 'layers': {}}, separators=(',', ':')).encode()
+    try:
+        return _flood_tile(z, x, y, ','.join(toks), data_version())
+    except sqlite3.Error:      # unreadable now (being rebuilt?): no tile, rather than an empty one cached as dry land
+        return None
 
 
-@functools.lru_cache(maxsize=512)
+@functools.lru_cache(maxsize=96)       # a busy low-zoom tile with every scenario is a few MB: keep the cache to a few hundred MB at most
 def _flood_tile(z, x, y, want, version):
     empty = json.dumps({'z': z, 'layers': {}}, separators=(',', ':')).encode()
     if not want or not WATERDB.exists():
@@ -971,12 +976,9 @@ def _flood_tile(z, x, y, want, version):
     cond = ["(f.layer='dike')"] if 'dike' in toks else []
     if scn:
         cond.append("(f.layer='flood' AND substr(f.cls,1,instr(f.cls,'-')-1) IN (%s))" % ','.join('?' * len(scn)))
-    try:
-        rows = cached[1].execute('SELECT f.layer,f.cls,f.name,f.geom FROM feat_idx i JOIN feat f ON f.id=i.id '
-                                 'WHERE i.maxx>=? AND i.minx<=? AND i.maxy>=? AND i.miny<=? AND i.minz<=? AND (' + ' OR '.join(cond) + ') ORDER BY f.id',
-                                 (lon0 - pad, lon1 + pad, lat0 - pad, lat1 + pad, z, *scn)).fetchall()
-    except sqlite3.Error:
-        return empty
+    rows = cached[1].execute('SELECT f.layer,f.cls,f.name,f.geom FROM feat_idx i JOIN feat f ON f.id=i.id '
+                             'WHERE i.maxx>=? AND i.minx<=? AND i.maxy>=? AND i.miny<=? AND i.minz<=? AND (' + ' OR '.join(cond) + ') ORDER BY f.id',
+                             (lon0 - pad, lon1 + pad, lat0 - pad, lat1 + pad, z, *scn)).fetchall()      # an error is raised, never cached
     return json.dumps({'z': z, 'layers': _tile_layers(rows, z, x, y)}, separators=(',', ':')).encode()
 
 
@@ -2175,7 +2177,10 @@ class Handler(library.Handler):
                 z, x, y = map(int, m.groups())
                 if not 3 <= z <= 18:
                     return self.send_json({'z': z, 'layers': {}})
-                return self.send_json(flood_tile(z, x, y, qs.get('s', '')), cache='max-age=86400' if 'v' in qs else 'max-age=60')
+                tile = flood_tile(z, x, y, qs.get('s', ''))
+                if tile is None:
+                    return self.send_json({'error': 'flood data unavailable'}, 503, cache='no-store')
+                return self.send_json(tile, cache='max-age=86400' if 'v' in qs else 'max-age=60')
             m = re.fullmatch(r'/api/map/tile/(\d+)/(\d+)/(\d+)', path)
             if m:
                 z, x, y = map(int, m.groups())
