@@ -66,6 +66,35 @@ def _parts(query):
     return number, normalize(' '.join(remainder)).split(), state, postcode
 
 
+_STYLES = {}
+
+
+def _style(path):
+    """An index's address style from its meta table ('nl' for the Netherlands); an index without one is a US state index."""
+    try:
+        key = (str(path), path.stat().st_mtime_ns)
+    except OSError:
+        return None
+    if key not in _STYLES:
+        style = 'us'
+        try:
+            db = sqlite3.connect(ro_uri(path), uri=True)
+            try:
+                row = db.execute("SELECT value FROM meta WHERE key='style'").fetchone()
+                style = row[0] if row and row[0] else 'us'
+            finally:
+                db.close()
+        except sqlite3.Error:
+            pass
+        _STYLES[key] = style
+    return _STYLES[key]
+
+
+def indexes(geo_directory, style):
+    """The installed address indexes written in one address style ('us' or 'nl')."""
+    return [path for path in sorted((Path(geo_directory) / 'addresses').glob('*.sqlite')) if _style(path) == style]
+
+
 def find_addresses(query, geo_directory, limit=8, near=None):
     """Return exact house-number matches from installed indexes, never a guessed house."""
     if not is_address_query(query):
@@ -74,7 +103,7 @@ def find_addresses(query, geo_directory, limit=8, near=None):
     if not words:
         return []
     geo_directory = Path(geo_directory)
-    paths = sorted((geo_directory / 'addresses').glob('*.sqlite'))
+    paths = indexes(geo_directory, 'us')
     if state:
         paths = [path for path in paths if path.stem.upper() == state]
     legacy = geo_directory / 'addresses.sqlite'

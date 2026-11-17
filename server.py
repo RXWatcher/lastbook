@@ -33,7 +33,7 @@ if __name__ == '__main__':  # --data must be known before the paths below are wo
 
 import engine.paths as lastbook_paths  # noqa: E402  (data folder and program folder can differ in the packaged app)
 from engine.paths import ro_uri  # noqa: E402
-from engine import saved_pages, address_search  # noqa: E402
+from engine import saved_pages, address_search, address_nl  # noqa: E402
 from engine.setup import api as setup_api  # noqa: E402  (the one module that may download: only when the person asks)
 HERE = lastbook_paths.DATA  # holds derived/
 APP = lastbook_paths.APP  # holds web/ and content/
@@ -1393,7 +1393,16 @@ def water_places(q, limit=10, near=None):
 
 
 def places(q, limit=20, near=None):
-    if address_search.is_address_query(q):
+    geo = HERE / 'derived' / 'geo'
+    us_address = address_search.is_address_query(q)
+    if address_nl.parse(q):
+        dutch = address_search.indexes(geo, 'nl')
+        if dutch:
+            hits = address_nl.find(q, dutch, limit=min(limit, 8), near=near)
+            if hits:
+                return hits
+            us_address = us_address and bool(address_search.indexes(geo, 'us'))   # no Dutch address: look for a place instead
+    if us_address:
         return address_search.find_addresses(q, HERE / 'derived' / 'geo', limit=min(limit, 8), near=near)
     if not PLACEDB.exists():
         return []
