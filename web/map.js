@@ -7,6 +7,10 @@ const MapView = (() => {
   let HOME = null;   // a household's own opening place, from web/home-area.json: a local file never packaged. "Set as my area" wins over it.
   const IN_WINDOW = location.protocol === 'lastbook:' || location.hostname === 'lastbook.invalid';
   const US = [-124.8, 24.4, -66.9, 49.4];  // lower 48
+  // The installed map's region (/api/map/info region, engine/regions.json): outside the US it brings metric units, its own credits
+  // and search words. A US map or a library without a regional map keeps the US wording.
+  const metric = () => st?.region?.units === 'metric';
+  const abroad = () => !!st?.region?.attribution;
   const FULL = ['<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>', '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>'];   // full screen, and leave it
   const C = { land: '#f2efe6', ocean: '#aad3df', water: '#aad3df', wet: '#cfe3d4', beach: '#f4e7b6',
     park: '#cfe7c2', playa: '#ece4cf', green: '#d5e8c6', farm: '#eceac6', res: '#ebe7de', com: '#f1e2df', ind: '#e8e1ea', bldg: '#d9d0c3', bldgLine: '#c6bcae',
@@ -19,8 +23,10 @@ const MapView = (() => {
 
   // Map layers: id, label, symbol, colour, server classes, group, note
   const LAYERS = [
-    ['hospital', 'Hospitals', 'H', '#c62828', 'hospital', 'help'],
-    ['clinic', 'Clinics & doctors', '+', '#d81b60', 'clinic,doctors', 'help'],
+    ['hospital', 'Hospitals', 'H', '#c62828', 'hospital,hospital_seh', 'help'],
+    ['clinic', 'Clinics & doctors', '+', '#d81b60', 'clinic,doctors,huisartsenpost', 'help'],
+    ['aed', 'Defibrillators (AED)', '♥', '#b71c1c', 'defibrillator', 'help'],
+    ['assembly', 'Emergency assembly points', 'A', '#6a1b9a', 'assembly_point', 'help'],
     ['dentist', 'Dentists', 'Dt', '#00695c', 'dentist', 'help'],
     ['pharmacy', 'Pharmacies', 'Rx', '#2e7d32', 'pharmacy,chemist', 'help'],
     ['fire', 'Fire stations', 'F', '#ef6c00', 'fire_station', 'help'],
@@ -46,8 +52,8 @@ const MapView = (() => {
   ].map(([id, label, sym, col, cls, group]) => ({ id, label, sym, col, cls: cls.split(','), group }));
   const GROUPS = [['help', 'Emergency help'], ['water', 'Water'], ['supply', 'Supplies & camping'], ['food', 'Food that keeps growing (2025 crop maps)'], ['resource', 'Natural resources (historical records)']];
   const BY_CLS = {}; for (const l of LAYERS) for (const c of l.cls) BY_CLS[c] = l;
-  const DEFAULT_LAYERS = ['hospital', 'clinic', 'pharmacy', 'fire', 'police', 'shelter', 'water', 'reservoir', 'fish', 'boat'];
-  const PRESETS = [['Emergency', ['hospital', 'clinic', 'dentist', 'pharmacy', 'fire', 'police', 'shelter', 'community']], ['Water', ['water', 'spring', 'reservoir', 'pond', 'dam', 'fish', 'boat']],
+  const DEFAULT_LAYERS = ['hospital', 'clinic', 'aed', 'pharmacy', 'fire', 'police', 'shelter', 'water', 'reservoir', 'fish', 'boat'];
+  const PRESETS = [['Emergency', ['hospital', 'clinic', 'aed', 'assembly', 'dentist', 'pharmacy', 'fire', 'police', 'shelter', 'community']], ['Water', ['water', 'spring', 'reservoir', 'pond', 'dam', 'fish', 'boat']],
     ['Supplies', ['food', 'hardware', 'fuel', 'camp']], ['Food trees', ['orchard', 'vineyard', 'berries']], ['Resources', ['fish', 'boat', 'mineral', 'well']], ['All', LAYERS.map(l => l.id)]];
   const LEGACY = { all_resources: ['fish', 'boat', 'mineral', 'well'], mineral: ['mineral'], oil_gas_well: ['well'], fish_stocking: ['fish'], boat_launch: ['boat'] };
   const FIELD = { commod1: 'Commodity', commod2: 'Also', commod3: 'Also', ore: 'Ore', dev_stat: 'Recorded status', oper_type: 'Operation', yr_lst_prd: 'Last production year',
@@ -57,6 +63,7 @@ const MapView = (() => {
     normal_storage_af: 'Normal storage (acre-ft)', max_storage_af: 'Max storage (acre-ft)', surface_acres: 'Surface (acres)', height_ft: 'Height (ft)', year: 'Built',
     dam_type: 'Dam type', hazard: 'Downstream hazard if it failed', condition: 'Condition', status: 'Status', area_acres: 'Area (acres)', water_type: 'Water present',
     reservoir_type: 'Reservoir type', crop: 'Crop', crop_acres: 'Acres of it in this ~600 m block', perennial_acres: 'All tree, vine & berry acres in block', year: 'Satellite crop map year',
+    crop_ha: 'Hectares of it in this ~600 m block', perennial_ha: 'All tree, vine & berry hectares in block',
     FUEL_SALES: 'Fuel sales', NO_OF_RAMP_LANE_USE_ONE_TIME: 'Ramp lanes', FISH_CLEANING: 'Fish cleaning', Comments: 'Notes', Website: 'Website' };
   const CAVEAT = { mineral: 'USGS mineral record: an occurrence or past mine, not proof of recoverable ore, access or safety. Old workings can be deadly.',
     oil_gas_well: 'State well record. Most are plugged or idle; never approach an unsealed well head.', fish_stocking: 'A past stocking record — it does not confirm fish are present now.',
@@ -69,6 +76,8 @@ const MapView = (() => {
     berries: 'USDA 2025 satellite crop map: usually right for big orchards, sometimes wrong for small ones. Trees and vines keep producing for decades but need water in dry regions and winter pruning. Private farmland — ask first.',
     perennial_veg: 'USDA 2025 satellite crop map: usually right for big orchards, sometimes wrong for small ones. Trees and vines keep producing for decades but need water in dry regions and winter pruning. Private farmland — ask first.',
     pond: 'Small ponds are often livestock ponds with manure runoff: treat the water and cook any fish thoroughly. Small ponds can be fished out in weeks.', spring: 'Mapped spring — treat the water before drinking.', drinking_water: 'Mapped tap; may be off in an emergency.' };
+  const CROP_CAVEAT_NL = 'RVO 2025 crop parcels as declared by farmers: right for the parcel, not for every tree. Private farmland — ask first.';
+  const caveat = cls => metric() && ['orchard', 'vineyard', 'berries', 'perennial_veg'].includes(cls) ? CROP_CAVEAT_NL : CAVEAT[cls];
   let st = null, world = null, geography = null;
 
   const load = (k, d) => { try { return JSON.parse(localStorage.getItem('sg.' + k)) ?? d } catch { return d } };
@@ -79,7 +88,8 @@ const MapView = (() => {
   const y2lat = (y, z) => { const n = Math.PI - 2 * Math.PI * y / 2 ** z; return 180 / Math.PI * Math.atan(Math.sinh(n)) };
   const escH = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const $ = id => document.getElementById(id);
-  const dist = km => km < 1.6 ? Math.round(km * 1000) + ' m' : (km / 1.609).toFixed(km < 16 ? 1 : 0) + ' mi';
+  const dist = km => metric() ? (km < 1 ? Math.round(km * 1000) + ' m' : km.toFixed(km < 10 ? 1 : 0) + ' km')
+    : km < 1.6 ? Math.round(km * 1000) + ' m' : (km / 1.609).toFixed(km < 16 ? 1 : 0) + ' mi';
   const kmBetween = (a, b, c, d) => { const r = Math.PI / 180, x = Math.sin((c - a) * r / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin((d - b) * r / 2) ** 2; return 12742 * Math.asin(Math.sqrt(x)) };
   const sym = (l, size = 22) => `<i class="msym" style="background:${l.col};width:${size}px;height:${size}px">${escH(l.sym)}</i>`;
   const layerOf = cls => BY_CLS[cls] || { sym: '•', col: '#555', label: cls };
@@ -101,7 +111,7 @@ const MapView = (() => {
     if (!on.length) on = DEFAULT_LAYERS;
     main.classList.add('map-page');
     document.title = 'Map · Lastbook';
-    main.innerHTML = `<div class="maphead"><h1>Map &amp; nearby help</h1><p class="small muted">Offline: works with no internet. Shows what was mapped by 25 Oct 2026 — not damage, closures or hazards.</p>${IN_WINDOW ? '<a class="btn plain" href="/ui/setup.html#manage">Map downloads</a>' : ''}</div>
+    main.innerHTML = `<div class="maphead"><h1>Map &amp; nearby help</h1><p class="small muted">Offline: works with no internet. Shows what was mapped by <span id="mapdate">25 Oct 2026</span> — not damage, closures or hazards.</p>${IN_WINDOW ? '<a class="btn plain" href="/ui/setup.html#manage">Map downloads</a>' : ''}</div>
     <div class="mapgrid"><div class="mapwrap" id="mapwrap">
       <canvas id="mapc" tabindex="0" role="application" aria-label="Map. Arrow keys move, plus and minus zoom, Escape closes details. The list beside the map gives the same places as text."></canvas>
       <div class="map-top">
@@ -161,7 +171,7 @@ const MapView = (() => {
       closeCard();
       const w = cv.clientWidth, h = cv.clientHeight;
       Terrain3D.open($('mapwrap'), { lat: st.lat, lon: st.lon, z: st.z, w, h, texture: cv, elev: elevation, demTile: (z, x, y) => demTile(z, x, y), getDem: (z, x, y) => st && st.dem.get(tileKey(z, x, y)),
-        geo: { lon2x, lat2y, x2lon, y2lat }, ver: st.ver, maxTz: tzMax(st.lat, st.lon) });
+        geo: { lon2x, lat2y, x2lon, y2lat }, ver: st.ver, maxTz: tzMax(st.lat, st.lon), metric: metric() });
     };
     document.addEventListener('fullscreenchange', st.onFull = () => { const f = document.fullscreenElement === $('mapwrap'); if (!f) $('mapwrap')?.classList.remove('max'); syncFull() });
     $('sethome').onclick = () => { save('mapHome', { lat: st.lat, lon: st.lon, z: Math.round(st.z) }); toastMap('Saved as your area on this device'); draw() };
@@ -176,6 +186,7 @@ const MapView = (() => {
     fetch('/api/map/info').then(r => r.json()).then(info => {
       if (!st) return;
       st.national = info.national; st.ver = info.version; st.aerialDetail = info.aerial_detail; st.aerialRev = info.aerial_rev; st.terrainCircle = info.terrain_circle;
+      st.region = info.region || null; regionText();
       describe(info); if (openWhole) fit(wholeMap(), 0.92, true); coverage(); draw();
       $('mdata').innerHTML = info.datasets.map(d => `<li class="row" style="display:block"><b>${escH(d.label)}</b><span class="muted">${escH(d.status)}</span>${d.bytes ? ` · ${(d.bytes / 1073741824).toFixed(1)} GB` : ''}</li>`).join('') +
         (st.have && !st.have.size ? '' : `<li class="row small muted" style="display:block">${st.have ? '' : 'Not drawn yet: forest types. '}Resource layers are records — fish, wells, mines and crops show where they were recorded or mapped, not proof of what is there now.</li>`);
@@ -189,6 +200,14 @@ const MapView = (() => {
     }, 60000);
     if (!openWhole) { draw(); settle() }
   }
+  // A region outside the US: its credits, search words, name and data date replace the US ones.
+  function regionText() {
+    const r = st.region; if (!r || !abroad()) return;
+    const at = document.querySelector('.mapattr'); if (at) at.textContent = r.attribution;
+    const q = $('pq'); if (q) { q.placeholder = r.search_hint; const l = document.querySelector('label[for="pq"]'); if (l) l.textContent = r.search_hint }
+    const b = $('map-us'); if (b) { b.title = 'Whole map: ' + r.name; b.setAttribute('aria-label', 'Whole map: ' + r.name) }
+    const d = $('mapdate'); if (d && r.data_as_of) d.textContent = new Date(r.data_as_of + 'T12:00:00Z').toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  }
   // What this map really holds, when the server says (an older one sends none of this, and everything stays offered).
   function describe(info) {
     if (info.aerial === false) { st.noAerial = true; st.style.aerial = false; $('map-photo')?.remove() }
@@ -198,7 +217,7 @@ const MapView = (() => {
     st.on = new Set([...st.on].filter(id => offered(LAYERS.find(l => l.id === id))));
     layerCount();
     if (!st.have.size) $('near').closest('section').hidden = true;
-    if (info.bounds) { const b = $('map-us'); b.textContent = 'All'; b.title = 'Whole map'; b.setAttribute('aria-label', 'Whole map') }
+    if (info.bounds) { const b = $('map-us'); b.textContent = 'All'; if (!abroad()) { b.title = 'Whole map'; b.setAttribute('aria-label', 'Whole map') } }
   }
   const offered = l => !st.have || (l && l.cls.some(c => st.have.has(c)));
   function toastMap(m) { if (typeof toast === 'function') toast(m) }
@@ -521,7 +540,7 @@ const MapView = (() => {
     g.strokeStyle = 'rgba(0,0,0,.3)'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(w / 2 - 7, h / 2); g.lineTo(w / 2 + 7, h / 2); g.moveTo(w / 2, h / 2 - 7); g.lineTo(w / 2, h / 2 + 7); g.stroke();
     const mpp = 156543.03 * Math.cos(st.lat * Math.PI / 180) / 2 ** st.z;
     const nice = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000, 100000, 200000, 500000, 1000000, 2000000].find(m => m / mpp > 60) || 100000;
-    const el = $('mscale'); if (el) el.innerHTML = `<span style="display:inline-block;width:${Math.round(nice / mpp)}px;border:2px solid #333;border-top:0;height:6px;vertical-align:middle"></span> ${nice >= 1000 ? nice / 1000 + ' km' : nice + ' m'} · ${(nice / 1609.34 < 1 ? Math.round(nice * 3.281) + ' ft' : (nice / 1609.34).toFixed(nice < 5000 ? 1 : 0) + ' mi')}`;
+    const el = $('mscale'); if (el) el.innerHTML = `<span style="display:inline-block;width:${Math.round(nice / mpp)}px;border:2px solid #333;border-top:0;height:6px;vertical-align:middle"></span> ${nice >= 1000 ? nice / 1000 + ' km' : nice + ' m'}${metric() ? '' : ' · ' + (nice / 1609.34 < 1 ? Math.round(nice * 3.281) + ' ft' : (nice / 1609.34).toFixed(nice < 5000 ? 1 : 0) + ' mi')}`;
     const at = el && el.parentNode.querySelector('.mapattr'); if (at) at.style.maxWidth = Math.max(120, el.parentNode.clientWidth - el.offsetWidth - 34) + 'px';   // the credits wrap before they reach the scale bar, however long it is
   }
 
@@ -585,12 +604,14 @@ const MapView = (() => {
     g.putImageData(img, 0, 0); return t.shade = c;
   }
   const CONTOUR = [[11, 200, 1000], [12, 100, 500], [13, 40, 200], [15, 20, 100], [16, 5, 25]];  // [from zoom, interval ft, index ft]; 5 ft only on lidar
+  const CONTOUR_M = [[11, 20, 100], [12, 10, 50], [13, 5, 25], [14, 2, 10], [15, 1, 5]];       // metres, for a flat country; below sea level too
+  const contourRules = () => metric() ? CONTOUR_M : CONTOUR;
   function contours(t, step) {
     if (t.contours[step]) return t.contours[step];
-    const h = t.h, ft = 3.28084, lines = [];  // marching squares on the 256x256 grid, in feet
+    const h = t.h, ft = metric() ? 1 : 3.28084, lines = [];  // marching squares on the 256x256 grid, in feet (metres outside the US)
     let lo = Infinity, hi = -Infinity; for (let i = 0; i < 65536; i++) { const v = h[i] * ft; if (v < lo) lo = v; if (v > hi) hi = v }
     for (let lev = Math.ceil(lo / step) * step; lev <= hi; lev += step) {
-      if (lev <= 0) continue;
+      if (metric() ? lev === 0 : lev <= 0) continue;   // 0 is the sea and empty water; a polder's contours lie below it
       const seg = [];
       for (let y = 0; y < 255; y++) for (let x = 0; x < 255; x++) {
         const a = h[y * 256 + x] * ft, b = h[y * 256 + x + 1] * ft, c = h[(y + 1) * 256 + x + 1] * ft, d = h[(y + 1) * 256 + x] * ft;
@@ -600,7 +621,7 @@ const MapView = (() => {
         const P = { 1: [3, 0], 2: [0, 1], 3: [3, 1], 4: [1, 2], 5: [3, 0, 1, 2], 6: [0, 2], 7: [3, 2], 8: [2, 3], 9: [0, 2], 10: [0, 1, 2, 3], 11: [1, 2], 12: [1, 3], 13: [0, 1], 14: [0, 3] }[idx];
         for (let k = 0; k < P.length; k += 2) { const p = e[P[k]], q = e[P[k + 1]]; seg.push(p[0] + .5, p[1] + .5, q[0] + .5, q[1] + .5) }
       }
-      if (seg.length) lines.push({ lev, index: lev % CONTOUR.find(c => c[1] === step)[2] === 0, seg: new Float32Array(seg) });
+      if (seg.length) lines.push({ lev, index: lev % contourRules().find(c => c[1] === step)[2] === 0, seg: new Float32Array(seg) });
     }
     return t.contours[step] = lines;
   }
@@ -629,7 +650,7 @@ const MapView = (() => {
       }
       g.restore();
     }
-    const rule = [...CONTOUR].reverse().find(c => st.z >= c[0] && (c[0] < 16 || tz > TZN));
+    const rule = [...contourRules()].reverse().find(c => st.z >= c[0] && (c[0] < 16 || tz > TZN));
     if (st.style.contours && rule) {
       const [, step] = rule, k = ts / 256;
       g.save(); g.lineJoin = 'round';
@@ -650,7 +671,7 @@ const MapView = (() => {
         for (const L of contours(t, step)) { if (!L.index) continue; const a = L.seg;
           for (let i = 0; i < a.length && placed.length < 24; i += 4 * 61) { const x = sx + a[i] * k, y = sy + a[i + 1] * k; if (x < 40 || x > w - 70 || y < 70 || y > h - 50) continue;
             if (placed.some(p => Math.abs(p[0] - x) < 130 && Math.abs(p[1] - y) < 70)) continue; placed.push([x, y]);
-            const s = L.lev.toLocaleString() + ' ft'; g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.85)'; g.strokeText(s, x, y); g.fillStyle = 'rgba(120,76,36,.95)'; g.fillText(s, x, y) } }
+            const s = L.lev.toLocaleString() + (metric() ? ' m' : ' ft'); g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.85)'; g.strokeText(s, x, y); g.fillStyle = 'rgba(120,76,36,.95)'; g.fillText(s, x, y) } }
       }
       g.restore();
     }
@@ -747,7 +768,8 @@ const MapView = (() => {
     }
     return st ? elevAt(lat, lon) : null;
   }
-  const fmtElev = m => `${Math.round(m * 3.28084).toLocaleString()} ft (${Math.round(m).toLocaleString()} m)`;
+  const fmtElev = m => metric() ? (Math.abs(m) < 10 ? (Math.round(m * 10) / 10) : Math.round(m)).toLocaleString('en').replace('-', '−') + ' m' + (m < 0 ? ' (below sea level)' : '')
+    : `${Math.round(m * 3.28084).toLocaleString()} ft (${Math.round(m).toLocaleString()} m)`;
 
   // ------------------------------------------------------------------ card ----
   function openCard(html) {
@@ -788,7 +810,7 @@ const MapView = (() => {
       .map(([k, v]) => `<tr><th>${escH(FIELD[k])}</th><td>${escH(v)}</td></tr>`).join('');
     const el = openCard(`${back ? `<button class="back">← ${escH(back.title)}</button>` : ''}<div class="kind">${sym(l, 20)}${escH(l.label)}</div><h3>${escH(unnamed(p))}</h3>
       ${p.records > 1 ? `<p class="muted small">${p.records} source records at this spot</p>` : ''}
-      ${rows ? `<table>${rows}</table>` : p.summary ? `<p>${escH(p.summary)}</p>` : ''}${detail.not_drinking_water ? `<p class="caveat"><b>Not a water source:</b> this is a ${escH((detail.reservoir_type || 'waste pond').toLowerCase())}. It can hold sewage, mine waste or chemicals that treatment won’t make safe.</p>` : ''}${/tailings/i.test(detail.purposes || '') ? '<p class="caveat"><b>Mine-tailings dam:</b> it holds mine waste, not usable water. Do not drink, swim or fish here.</p>' : ''}${CAVEAT[p.cls] && !detail.not_drinking_water ? `<p class="caveat">${escH(CAVEAT[p.cls])}</p>` : ''}${coordsBlock(p)}
+      ${rows ? `<table>${rows}</table>` : p.summary ? `<p>${escH(p.summary)}</p>` : ''}${detail.not_drinking_water ? `<p class="caveat"><b>Not a water source:</b> this is a ${escH((detail.reservoir_type || 'waste pond').toLowerCase())}. It can hold sewage, mine waste or chemicals that treatment won’t make safe.</p>` : ''}${/tailings/i.test(detail.purposes || '') ? '<p class="caveat"><b>Mine-tailings dam:</b> it holds mine waste, not usable water. Do not drink, swim or fish here.</p>' : ''}${caveat(p.cls) && !detail.not_drinking_water ? `<p class="caveat">${escH(caveat(p.cls))}</p>` : ''}${coordsBlock(p)}
       <div class="acts"><button data-a="zoom">Zoom here</button><button data-a="copy">Copy coordinates</button></div>`);   // no web links: the words stay, the addresses go
     if (back) el.querySelector('.back').onclick = () => showMembers(back.p);
     wireCoords(p); reveal(p.lat, p.lon);
@@ -854,7 +876,7 @@ const MapView = (() => {
       const r = await fetch(`/api/map/near?lat=${st.lat}&lon=${st.lon}&cls=${ks.join(',')}&limit=${Math.max(3, Math.ceil(14 / ks.length))}`).then(r => r.json());
       if (st !== state || serial !== st.serial.near) return;
       box.classList.remove('busy');
-      if (!Array.isArray(r) || !r.length) { box.innerHTML = '<p class="muted small">Nothing from your layers within about 100 miles of the map center.</p>'; return }
+      if (!Array.isArray(r) || !r.length) { box.innerHTML = `<p class="muted small">Nothing from your layers within about ${metric() ? '160 km' : '100 miles'} of the map center.</p>`; return }
       const list = r.sort((a, b) => a.km - b.km).slice(0, 14);
       box.innerHTML = list.map((p, i) => `<button data-i="${i}">${sym(layerOf(p.cls), 24)}<span><b>${escH(unnamed(p))}</b><small>${escH(layerOf(p.cls).label)} · ${dist(p.km)} ${escH(p.dir)}</small>${p.detail ? `<small>${escH(p.detail)}</small>` : ''}</span></button>`).join('');
       box.querySelectorAll('button').forEach(b => b.onclick = () => {
@@ -872,8 +894,10 @@ const MapView = (() => {
     try {
       const r = await fetch('/api/places?q=' + encodeURIComponent(q) + `&near=${st.lat.toFixed(3)},${st.lon.toFixed(3)}`).then(r => r.json());
       if (st !== state || serial !== st.serial.place) return;
-      if (!r.length) { const address = /^\s*\d[\w-]*\s+\S/.test(q); box.innerHTML = '<p class="muted small" style="padding:8px">' + (address ? 'Address not found in your offline data. Check the house number and street.' + (IN_WINDOW ? ' <a href="/ui/setup.html#manage">Add your state’s address search</a>.' : '') : 'No place by that name in the saved gazetteers. Try a town, county or 5-digit ZIP.') + '</p>'; return }
-      const pick = p => { box.hidden = true; st.mark = { lat: p.lat, lon: p.lon, name: p.name, kind: p.kind, detail: p.detail }; closeCard(); go(p.lat, p.lon, /county/i.test(p.kind) ? 10 : /ZIP|city|town|populated|^(Lake|Reservoir)$/i.test(p.kind) ? 13 : 15); st.cv.focus() };
+      if (!r.length) {
+        if (abroad()) { box.innerHTML = '<p class="muted small" style="padding:8px">Nothing found in your offline data. ' + escH(st.region.place_hint) + ' For an address, check the postcode and house number.' + (IN_WINDOW ? ' <a href="/ui/setup.html#manage">Add address search for your region</a>.' : '') + '</p>'; return }
+        const address = /^\s*\d[\w-]*\s+\S/.test(q); box.innerHTML = '<p class="muted small" style="padding:8px">' + (address ? 'Address not found in your offline data. Check the house number and street.' + (IN_WINDOW ? ' <a href="/ui/setup.html#manage">Add your state’s address search</a>.' : '') : 'No place by that name in the saved gazetteers. Try a town, county or 5-digit ZIP.') + '</p>'; return }
+      const pick = p => { box.hidden = true; st.mark = { lat: p.lat, lon: p.lon, name: p.name, kind: p.kind, detail: p.detail }; closeCard(); go(p.lat, p.lon, /province/i.test(p.kind) ? 8 : /county/i.test(p.kind) ? 10 : /municipality/i.test(p.kind) ? 11 : /^Postcode$/.test(p.kind) ? 16 : /ZIP|city|town|populated|^(Lake|Reservoir)$/i.test(p.kind) ? 13 : 15); st.cv.focus() };
       box.innerHTML = `<div class="small muted" style="padding:4px 8px">${r.length} match${r.length === 1 ? '' : 'es'}</div>` + r.map((p, i) => `<button data-i="${i}"><b>${escH(p.name)}</b><small>${escH(p.kind)} · ${escH(p.detail)}</small></button>`).join('');
       box.querySelectorAll('button').forEach(b => b.onclick = () => pick(r[+b.dataset.i]));
       if (r.length === 1) pick(r[0]);
