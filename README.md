@@ -9,6 +9,153 @@ Website: <https://lastbook.org>. Contact: hello@lastbook.org.
 > Lastbook’s original code and documentation are licensed under the [MIT License](LICENSE).
 > Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) to get started.
 
+> **This is a fork of [Immortal-Protocols/lastbook](https://github.com/Immortal-Protocols/lastbook) that adds the Netherlands.**
+> Everything upstream works as before. On top of it, Lastbook learns about *regions* beyond US states, and the Netherlands is
+> the first: a detailed offline map of the whole country with Dutch help points and Dutch address search, in English. See
+> [Lastbook for the Netherlands](#lastbook-for-the-netherlands) below. The website, downloads and released apps named in this
+> README are upstream's; they do not include the Netherlands.
+
+## Lastbook for the Netherlands
+
+The Netherlands is one region, code `NL`, covering the European Netherlands (box 3.2–7.3° E, 50.7–53.7° N). Choose it in setup
+instead of a US state and you get:
+
+| What | From | Licence | In the build of 17 Nov 2026 |
+|---|---|---|---|
+| Streets, land use, water, rail, place names, coast | OpenStreetMap (Geofabrik `netherlands-latest.osm.pbf`, osmdata coastline polygons) | ODbL 1.0 | 5,563,556 map features |
+| Help points: hospitals (marked when they have an emergency department, SEH), out-of-hours GP posts (huisartsenposten), defibrillators (AED), emergency assembly points, pharmacies, fire, police, drinking water, shelters, supermarkets, fuel | OpenStreetMap | ODbL 1.0 | 77,924 points, including 4,363 AEDs and 75 SEH hospitals |
+| Building outlines | Kadaster BAG (`bag-light.gpkg`, PDOK) | CC0 1.0 | 11,297,049 buildings |
+| Address search: postcode and house number (`1012 LG 1`), street first (`Damrak 1 Amsterdam`), a postcode alone (`3511 AA`), any house-number addition (`12A`, `12-2`, `2-III`, `2 hs`) | Kadaster BAG | CC0 1.0 | 9,706,576 addresses |
+| Elevation, relief, contours in metres, heights below sea level | AHN4 terrain model (Rijkswaterstaat, PDOK WCS), at 1 arc-second | CC0 1.0 | the whole country; the Zuidplaspolder reads −4.5 m |
+| Orchards, vineyards, soft fruit, asparagus and rhubarb | RVO BRP Gewaspercelen 2025 | CC0 1.0 | 6,013 map cells from 16,207 parcels |
+| Find a town, municipality or province (Den Haag and Den Bosch work as well as BAG's 's-Gravenhage and 's-Hertogenbosch) | BAG towns and villages; OpenStreetMap municipalities and provinces | CC0 1.0; ODbL 1.0 | 67,160 names |
+| Named lakes | OpenStreetMap | ODbL 1.0 | 4,750 |
+
+The map screen follows the region: kilometres and metres, the Dutch credit line
+(`© OpenStreetMap contributors · Kadaster BAG · AHN · RVO BRP · Natural Earth`), "Find an address, postcode or town", the date the
+map data was taken, and two new layers (Defibrillators, Emergency assembly points). Setup lists the Netherlands under
+"Countries", above the US states. US maps, words and units are unchanged.
+
+Every source, licence and check, and what was left out and why, is in [docs/REGIONS-NL.md](docs/REGIONS-NL.md).
+
+### Getting it running
+
+Lastbook's website does not host the Netherlands map, and the released apps do not know about it. You build the map files
+once and run Lastbook from source. Tested on an Apple Silicon Mac (macOS); the tools are plain Python and should run on
+Linux too. Plan on about 13 GB of downloads (16 GB once unpacked), about 25 GB of free disk for the sources and the build, and about
+25 minutes of build time on a recent Mac, plus the library you choose in setup.
+
+**1. Clone this fork and make the app's Python environment** (Python 3.11):
+
+```bash
+git clone https://github.com/RXWatcher/lastbook.git && cd lastbook
+python3.11 -m venv .venv
+.venv/bin/pip install -r packaging/requirements_macos.txt     # Windows: packaging/requirements_app.txt; Linux: packaging/linux/requirements_linux.txt
+```
+
+**2. Make the build environment** (only for building the map; never part of the app):
+
+```bash
+python3.11 -m venv derived/buildenv
+derived/buildenv/bin/pip install -r tools/requirements-build-nl.txt
+```
+
+**3. Download the sources** into `derived/sources/nl/` (all open data; about 13 GB):
+
+```bash
+mkdir -p derived/sources/nl && cd derived/sources/nl
+curl -fLO https://download.geofabrik.de/europe/netherlands-latest.osm.pbf                          # OpenStreetMap, 1.3 GB
+curl -fLO https://osmdata.openstreetmap.de/download/water-polygons-split-4326.zip                  # sea, 0.9 GB
+curl -fLO https://osmdata.openstreetmap.de/download/land-polygons-split-4326.zip                   # land, 0.8 GB
+curl -fLO https://service.pdok.nl/kadaster/bag/atom/downloads/bag-light.gpkg                       # BAG, 7.8 GB
+curl -fLO https://service.pdok.nl/rvo/gewaspercelen/atom/downloads/brpgewaspercelen_definitief_2025.gpkg   # BRP, 2.9 GB
+unzip -q water-polygons-split-4326.zip && unzip -q land-polygons-split-4326.zip
+cd ../../..
+```
+
+**4. Build the map files** into `derived/geo-nl/` (elevation is fetched from PDOK's AHN service by `fetch_ahn.py`, 221 MB):
+
+```bash
+B=derived/buildenv/bin/python; S=derived/sources/nl; G=derived/geo-nl; BOX=3.2,50.7,7.3,53.7
+$B tools/build_map_osm.py $S/netherlands-latest.osm.pbf $G/national.sqlite --box $BOX \
+   --water-polygons $S/water-polygons-split-4326 --land-polygons $S/land-polygons-split-4326 --admin $G/admin.sqlite   # ~12 min
+$B tools/build_water.py --geo $G osm
+$B tools/build_bag.py $S/bag-light.gpkg $G --box $BOX                                                                    # ~6 min
+$B tools/build_places_nl.py $G/national.sqlite $S/bag-light.gpkg $G/admin.sqlite $G/places.sqlite
+$B tools/fetch_ahn.py $S/ahn --box $BOX
+$B tools/build_terrain.py --src $S/ahn --out $G/terrain.sqlite --bbox $BOX --workers 6 \
+   --source-label "AHN4 DTM (Rijkswaterstaat, CC0 1.0), 1 arc-second"
+$B tools/build_crops_nl.py $S/brpgewaspercelen_definitief_2025.gpkg $G/crops.sqlite --box $BOX
+```
+
+**5. Package them and tell setup about them:**
+
+```bash
+.venv/bin/python packaging/region_maps.py build NL --src derived/geo-nl   # checks the set, writes the two zips below
+.venv/bin/python packaging/region_maps.py manifest NL                     # lists them in derived/release/manifest-v1.json
+.venv/bin/python packaging/region_maps.py dev-manifest                    # the setup manifest the app reads when run from source
+```
+
+This writes `derived/packs/state-zips/Lastbook-Map-NL.zip` (about 0.9 GB) and `Lastbook-Addresses-NL.zip` (about 0.4 GB). The
+manifest holds their size and SHA-256, so setup accepts exactly the files you built; rebuild the manifest whenever you rebuild
+the zips. `dev-manifest` also fetches upstream's manifest once, so the library packs still download from lastbook.org.
+
+**6. Put the two zips where setup looks for files:**
+
+| System | Folder |
+|---|---|
+| macOS | `~/Library/Application Support/Lastbook/` |
+| Linux | `~/.local/share/Lastbook/` |
+| Windows | `%LOCALAPPDATA%\Lastbook\` |
+
+Setup also names this folder on screen if a zip is missing.
+
+**7. Run Lastbook and choose the Netherlands:**
+
+```bash
+.venv/bin/python app/main.py
+```
+
+- *First run:* pick a library (Small is 7.7 GB and downloads from lastbook.org), choose **Netherlands** under "Countries",
+  and start. The two Netherlands zips are found on the computer, checked and installed; nothing about them is downloaded.
+- *An existing library:* Library and local AI → **Choose state or country** → Netherlands.
+- *In a browser instead* (the library server): `LASTBOOK_DATA=/path/to/LastbookData .venv/bin/python server.py`, then open
+  <http://127.0.0.1:8890/>. Setup is at <http://127.0.0.1:8890/ui/setup.html#manage>.
+
+One map set per library: choosing the Netherlands replaces a US state map, and the other way round.
+
+For your own build of the app (`packaging/build_app_macos.sh` and the Windows and Linux builds), `region_maps.py manifest NL`
+adds the Netherlands to `derived/release/manifest-v1.json`, the release manifest the build bundles. That file is upstream's
+release material and is not in this repository, so it must also list the library packs. The built app still installs the
+Netherlands only from the files.
+
+### What is not there yet
+
+- **Out-of-hours GP posts are thin.** OpenStreetMap has about 40 of the roughly 115. Call 112 or your own GP's number.
+- **Secondary addresses** (BAG nevenadressen) are not in the BAG file used, so they cannot be searched.
+- **No flood layers** yet: primary flood defences, flood-risk maps. They need a new kind of map layer.
+- **No Dutch guides or documents** yet. The guides are upstream's, US-based but mostly general (water, first aid, food,
+  shelter). The government's English "Denk vooruit" booklet and emergency kit list are the obvious next addition.
+- **No building heights** for the 3D view, and no Caribbean Netherlands.
+- **AEDs**: OpenStreetMap has about 4,400, far fewer than the national register, and most public AEDs are in locked cabinets
+  whose code comes from 112.
+
+### How it fits into Lastbook
+
+- `engine/regions.json` and `engine/regions.py`: the regions Lastbook has a detailed map for. These are the 52 US states and the
+  Netherlands, each with a name, kind, units, address style, box, credits and dataset list. Setup, address search, the server
+  and the build tools read it, so another country is one entry plus its data.
+- `engine/address_nl.py`: Dutch address search, used by `server.places` when a Netherlands index is installed.
+- Setup accepts region ids (`NL`, `DE-BY`), and manifest entries marked `local_only` that are installed only from a file on the
+  computer (`docs/SETUP-API.md`).
+- `tools/build_map_osm.py`, `build_bag.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`: the Netherlands
+  builders. `tools/map_schema.py` holds the street-map format they share with `tools/build_map.py`.
+- `packaging/region_maps.py`: assembles, checks and zips a region's map set. `packaging/map_sets.py` holds the map-set
+  contract it shares with `packaging/state_maps.py`.
+- Design and implementation plan: `docs/superpowers/specs/2026-11-17-netherlands-region-design.md` and
+  `docs/superpowers/plans/2026-11-17-netherlands-region.md`. [docs/REGIONS-NL.md](docs/REGIONS-NL.md) is written in the
+  same shape as upstream's country proposals, so it can go back upstream with the code.
+
 ## Release status
 
 | Platform | Version | Status |
@@ -16,6 +163,7 @@ Website: <https://lastbook.org>. Contact: hello@lastbook.org.
 | macOS (Apple Silicon, macOS 14 or later) | 1.1.11 | Live on lastbook.org, signed and notarized |
 | Windows (64-bit, Windows 10 or later) | 1.1.11 | Live on lastbook.org, Authenticode signed |
 | Linux (Ubuntu 24.04 or 26.04 LTS, x86_64) | 1.1.11 | Ubuntu packages; installation instructions below |
+| Netherlands map (this fork) | source | Run from source with a map set you build; see [Lastbook for the Netherlands](#lastbook-for-the-netherlands) |
 
 ## iPad (development preview, source only)
 
@@ -48,9 +196,9 @@ other Linux distributions have not been validated for this release.
   with page numbers, plus what curators looked for and did not find (`content/gaps.json`).
 - **The full library.** Manuals and PDFs (with a whole-PDF view), videos, and offline encyclopedias (ZIM files), with
   keyword search everywhere and meaning-based search on Windows.
-- **Offline map.** A base map of the world and the US, plus a detailed map for the state selected during setup: local streets,
-  buildings, terrain, crops, and water, help and resource points. Addresses in that state can be found offline. The person
-  picks the state; Lastbook never detects location.
+- **Offline map.** A base map of the world and the US, plus a detailed map for the state, or the country (this fork: the
+  Netherlands), selected during setup: local streets, buildings, terrain, crops, and water, help and resource points.
+  Addresses there can be found offline. The person picks the state or country; Lastbook never detects location.
 - **Optional local AI.** Ask questions in plain words and get answers that cite library pages, from a model that runs on
   the computer itself (see "The local AI" below). Without it, Chat still finds the right pages.
 - **One-download setup.** On first run, setup defaults to Small and selects local AI when the computer can run it.
@@ -88,15 +236,15 @@ The setup contract, including state maps, is in [docs/SETUP-API.md](docs/SETUP-A
 | Path | What it is |
 |---|---|
 | `app/` | The desktop app: entry point (`main.py`), the no-port bridge, the macOS, Windows and Linux shells, and tests (`app/tests/`). |
-| `engine/` | Paths and data-folder lookup, library access, saved pages, offline address search (`address_search.py`), the update check (`update.py`) and first-run setup (`engine/setup/`). `engine/vendor-macos/` holds pypdfium2 for the Mac build. |
+| `engine/` | Paths and data-folder lookup, library access, saved pages, offline address search (`address_search.py`, and `address_nl.py` for Dutch addresses), the regions with a detailed map (`regions.json`, `regions.py`), the update check (`update.py`) and first-run setup (`engine/setup/`). `engine/vendor-macos/` holds pypdfium2 for the Mac build. |
 | `server.py`, `assistant.py`, `retrieval.py`, `llm_local.py` | The engine: request handler, the assistant and its citation checks, keyword plus meaning-based search, and the local AI (model pins, fit check, runner control). |
 | `web/` | The interface, in plain HTML, CSS and JavaScript with no build step and nothing loaded from the web. `setup.*` is the setup screen, `update.js` the update check in About. |
 | `content/` | The curated guides (`topics/*.json`) and what curators looked for and did not find (`gaps.json`). Format: `content/SCHEMA.md`. |
-| `packaging/` | App builds (macOS, Windows and Linux), the Windows installer and its front (`setup_stub/`), signing helper (`sign_windows.ps1`), icons (`icon/`), pack and state-map builders, release manifest, TLS roots tools, package scans, and `packaging/llm/` (the local AI runner). |
+| `packaging/` | App builds (macOS, Windows and Linux), the Windows installer and its front (`setup_stub/`), signing helper (`sign_windows.ps1`), icons (`icon/`), pack and state-map builders, the region map-set packager (`region_maps.py`, `map_sets.py`), release manifest, TLS roots tools, package scans, and `packaging/llm/` (the local AI runner). |
 | `derived/packs/pack-spec.json` | What goes into each download pack (Small, Medium, All and add-ons) and each state map. Everything else under `derived/` is generated and not kept here. |
-| `tools/` | Builders for the offline map, addresses and place finder, plus curator helpers (`libq.py`, `validate_topics.py`). |
+| `tools/` | Builders for the offline map, addresses and place finder (US; and for the Netherlands `build_map_osm.py`, `build_bag.py`, `build_places_nl.py`, `fetch_ahn.py`, `build_crops_nl.py`, with their tests in `tools/tests/`), plus curator helpers (`libq.py`, `validate_topics.py`). |
 | `website/`, `website-next/` | The earlier website and the current static lastbook.org site, respectively. |
-| `docs/` | The setup contract (`SETUP-API.md`), how the offline map is put together (`MAPS.md`) and notes on the library server version (`LIBRARY-SERVER.md`). |
+| `docs/` | The setup contract (`SETUP-API.md`), how the offline map is put together (`MAPS.md`), the country proposals (`REGIONS*.md`; `REGIONS-NL.md` is built), notes on the library server version (`LIBRARY-SERVER.md`), and the Netherlands design and plan (`superpowers/`). |
 
 ## Run from source
 
@@ -112,7 +260,7 @@ python3 -m venv .venv
 
 Without `--data`, the app checks `LASTBOOK_DATA`, the folder chosen last time, and its own data folder.
 Existing libraries elsewhere are accessed when the person chooses them. If no library is available, it opens setup.
-The full order is in `app/main.py`.
+The full order is in `app/main.py`. For the Netherlands, see [Getting it running](#getting-it-running).
 
 The **library server** version runs the same engine in a browser and can share with phones on the same Wi-Fi:
 
