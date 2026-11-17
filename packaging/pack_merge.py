@@ -12,8 +12,10 @@ here only the add-on's own files.
 Writes, in the library: the add-on's documents and text, its records joined into library-data/catalog.json, its pages inserted into
 library-data/search.sqlite, library-data/summary.json recomputed, pack.json (add_ons and counts), and pack-manifest.tsv, so a repair from setup
 still finds every file as it should be. `remove` undoes it. Nothing is downloaded and no network is used.
-An id the library already has is never overwritten, unless it came from this same add-on (then adding again replaces it). Setting up a
-different library (an upgrade) leaves the add-on behind: add it again.
+An id or a file the library already has is never overwritten, unless it came from this same add-on (then adding again replaces it).
+Everything is checked before anything is written, and an add that fails part way takes out what it had copied. `remove` deletes a
+file only when no record left in the catalog names it. Setting up a different library (an upgrade) leaves the add-on behind: add it
+again.
 Licence: the tool is Lastbook's; each document keeps the licence its catalog record names.
 """
 import argparse
@@ -103,8 +105,9 @@ class Staged:
         addon = Path(addon)
         if addon.is_file():
             self.tmp = tempfile.TemporaryDirectory(prefix='lastbook-addon-')
-            try:
-                lib = install.unpack(addon, self.tmp.name, None, _NeverStopped, lambda done, total: None, allowed=allowed,
+            try:      # a ceiling on what the zip may unpack to, so a damaged or hostile one cannot fill the disk
+                limit = max(256 * 2 ** 20, 8 * addon.stat().st_size)
+                lib = install.unpack(addon, self.tmp.name, limit, _NeverStopped, lambda done, total: None, allowed=allowed,
                                      verify=lambda lib: None)
             except install.Refused as e:
                 self.close()
@@ -195,53 +198,91 @@ def refresh_contents(data, drop_ids=(), add=()):
     write_atomic(path, '\n'.join(out) + '\n')
 
 
-def finish(data, records, pack, drop=(), add=(), how=''):
-    """The shared files, written in the order that leaves the library whole if it stops half way: catalog last but one, manifest last."""
+def write_catalog(data, records, pack):
+    """catalog.json, summary.json and pack.json, for the records the library now has."""
     lib = data / 'library-data'
     write_atomic(lib / 'catalog.json', json.dumps(records, indent=2))
     write_atomic(lib / 'summary.json', json.dumps(summary(records), indent=1))
     pack['counts'] = dict(collections.Counter(r['kind'] for r in records))
     write_atomic(data / 'pack.json', json.dumps(pack, indent=1))
-    refresh_manifest(data, drop=drop, add=add, how=how)
+
+
+def record_files(records):
+    """The library files the records name (path and text_path, as library-data/...)."""
+    return {'library-data/' + str(r[key]) for r in records for key in ('path', 'text_path') if r.get(key)}
 
 
 def add(data, addon):
-    """Puts the add-on into the library at data. Returns the ids added."""
+    """Puts the add-on into the library at data. Returns the ids added. Everything is checked before anything is written: an id,
+    or a file, that the library already has and that is not this add-on's is refused, and so is a search index the add-on's pages
+    do not fit. A failure while copying or indexing takes out what this add had written."""
     data = library(data)
     staged = Staged(addon)
     try:
         pack = read_json(data / 'pack.json', default={})
         name = staged.pack['name']
-        if any(a.get('name') == name for a in pack.get('add_ons', []) if isinstance(a, dict)):
-            remove(data, name)                       # adding again replaces: the same files, the new ones
-            pack = read_json(data / 'pack.json', default={})
-        records = read_json(data / 'library-data' / 'catalog.json')
-        have = {r.get('id') for r in records}
-        clash = sorted(r['id'] for r in staged.records if r['id'] in have)
+        lib = data / 'library-data'
+        records = read_json(lib / 'catalog.json')
+        earlier = next((a for a in pack.get('add_ons', []) if isinstance(a, dict) and a.get('name') == name), None)
+        own_ids = set(earlier['ids']) if earlier else set()
+        others = [r for r in records if r.get('id') not in own_ids]
+        own_files = record_files([r for r in records if r.get('id') in own_ids])
+        clash = sorted(r['id'] for r in staged.records if r['id'] in {o.get('id') for o in others})
         if clash:
             raise Refused(f'The library already has {clash[0]}, and it is not from this add-on. Nothing was changed.')
-        lib = data / 'library-data'
+        named = record_files(others)
+        for rel in staged.files:
+            if rel in named or ((data / rel).exists() and rel not in own_files):
+                raise Refused(f'The library already has a file at {rel}, and it is not from this add-on. Nothing was changed.')
         db = lib / 'search.sqlite'
         con = sqlite3.connect(db)
         try:
-            if not con.execute("SELECT 1 FROM sqlite_master WHERE name='pages'").fetchone():
-                raise Refused('The library has no search index to add to.')
+            mine = [c[1] for c in con.execute('PRAGMA table_info(pages)')]
         finally:
             con.close()
-        for rel in staged.files:
-            copy_atomic(staged.root / rel, data / rel)
-        con = sqlite3.connect(db)
+        if not mine:
+            raise Refused('The library has no search index to add to. Nothing was changed.')
+        con = sqlite3.connect(f'file:{staged.root / "library-data" / "search.sqlite"}?mode=ro', uri=True)
         try:
-            con.execute('ATTACH DATABASE ? AS addon', (str(staged.root.joinpath('library-data', 'search.sqlite').resolve()),))
-            ids = [r['id'] for r in staged.records]
-            con.execute(f'DELETE FROM main.pages WHERE doc_id IN ({",".join("?" * len(ids))})', ids)     # a stop half way through an earlier add
-            con.execute(f'INSERT INTO main.pages SELECT * FROM addon.pages WHERE doc_id IN ({",".join("?" * len(ids))})', ids)
-            con.commit()
-            con.execute('DETACH DATABASE addon')
+            theirs = [c[1] for c in con.execute('PRAGMA table_info(pages)')]
         finally:
             con.close()
+        if theirs != mine:
+            raise Refused("The add-on's search pages do not fit this library's search index. Nothing was changed.")
+        if earlier:
+            remove(data, name)                       # adding again replaces: the same files, the new ones
+            pack = read_json(data / 'pack.json', default={})
+            records = read_json(lib / 'catalog.json')
+        ids = [r['id'] for r in staged.records]
+        copied = []
+        try:
+            for rel in staged.files:
+                copy_atomic(staged.root / rel, data / rel)
+                copied.append(rel)
+            con = sqlite3.connect(db)
+            try:
+                con.execute('ATTACH DATABASE ? AS addon', (str(staged.root.joinpath('library-data', 'search.sqlite').resolve()),))
+                con.execute(f'DELETE FROM main.pages WHERE doc_id IN ({",".join("?" * len(ids))})', ids)     # a stop half way through an earlier add
+                con.execute(f'INSERT INTO main.pages SELECT * FROM addon.pages WHERE doc_id IN ({",".join("?" * len(ids))})', ids)
+                con.commit()
+                con.execute('DETACH DATABASE addon')
+            finally:
+                con.close()
+        except (OSError, sqlite3.Error) as e:
+            for rel in copied:
+                (data / rel).unlink(missing_ok=True)
+            try:
+                con = sqlite3.connect(db)
+                con.execute(f'DELETE FROM pages WHERE doc_id IN ({",".join("?" * len(ids))})', ids)
+                con.commit()
+                con.close()
+            except sqlite3.Error:
+                pass
+            raise Refused(f'The add-on could not be added ({e}); what was copied was taken out again'
+                          + (', and the earlier copy of this add-on had already been removed.' if earlier else '.'))
         pack.setdefault('add_ons', []).append({'name': name, 'ids': ids, 'revision': staged.pack.get('content_revision', '')})
-        finish(data, records + staged.records, pack, add=staged.files, how=f'add-on:{name}')
+        write_catalog(data, records + staged.records, pack)       # the records last: they name files that are now there
+        refresh_manifest(data, add=staged.files, how=f'add-on:{name}')
         refresh_contents(data, add=staged.records)
         return ids
     finally:
@@ -249,7 +290,8 @@ def add(data, addon):
 
 
 def remove(data, name):
-    """Takes the add-on called name out of the library at data. Returns the ids removed."""
+    """Takes the add-on called name out of the library at data. Returns the ids removed. The catalog is written first, so no record
+    is left naming a file that is gone; a file another record still names is kept."""
     data = library(data)
     pack = read_json(data / 'pack.json', default={})
     entry = next((a for a in pack.get('add_ons', []) if isinstance(a, dict) and a.get('name') == name), None)
@@ -260,26 +302,26 @@ def remove(data, name):
     records = read_json(lib / 'catalog.json')
     gone = [r for r in records if r['id'] in ids]
     keep = [r for r in records if r['id'] not in ids]
+    pack['add_ons'] = [a for a in pack['add_ons'] if a is not entry]
+    write_catalog(data, keep, pack)
     con = sqlite3.connect(lib / 'search.sqlite')
     try:
         con.execute(f'DELETE FROM pages WHERE doc_id IN ({",".join("?" * len(ids))})', sorted(ids))
         con.commit()
     finally:
         con.close()
+    kept = record_files(keep)
     paths = []
-    for r in gone:
-        for key in ('path', 'text_path'):
-            rel = 'library-data/' + r[key]
-            if allowed(rel) and '..' not in Path(rel).parts:
-                paths.append(rel)
-                (data / rel).unlink(missing_ok=True)
+    for rel in sorted(record_files(gone)):
+        if allowed(rel) and '..' not in Path(rel).parts and rel not in kept:
+            paths.append(rel)
+            (data / rel).unlink(missing_ok=True)
     for rel in paths:                                # a folder the add-on made, now empty
         p = (data / rel).parent
         while p != lib and p.is_dir() and not any(p.iterdir()):
             p.rmdir()
             p = p.parent
-    pack['add_ons'] = [a for a in pack['add_ons'] if a is not entry]
-    finish(data, keep, pack, drop=set(paths))
+    refresh_manifest(data, drop=set(paths))
     refresh_contents(data, drop_ids=ids)
     return sorted(ids)
 

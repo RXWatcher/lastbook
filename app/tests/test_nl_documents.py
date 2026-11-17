@@ -305,6 +305,54 @@ class Merge(unittest.TestCase):
         with self.assertRaises(merge.Refused):
             merge.add(self.data, self.addon)
 
+    def addon_records(self):
+        return json.loads((self.addon / 'library-data' / 'catalog.json').read_text(encoding='utf-8'))
+
+    def test_a_file_the_library_already_has_is_not_overwritten(self):
+        """A record of the library's own that names the add-on's file path: refused, and the library's file is left as it was."""
+        theirs = self.addon_records()[0]['path']
+        cat = self.cat()
+        cat[0]['path'] = theirs
+        (self.data / 'library-data' / 'catalog.json').write_text(json.dumps(cat, indent=2), encoding='utf-8')
+        mine = self.data / 'library-data' / theirs
+        mine.parent.mkdir(parents=True, exist_ok=True)
+        mine.write_bytes(b'%PDF-1.4 the library own')
+        with self.assertRaises(merge.Refused):
+            merge.add(self.data, self.addon)
+        self.assertEqual(mine.read_bytes(), b'%PDF-1.4 the library own')
+
+    def test_a_stray_file_in_the_way_is_not_overwritten(self):
+        theirs = self.data / 'library-data' / self.addon_records()[0]['text_path']
+        theirs.parent.mkdir(parents=True, exist_ok=True)
+        theirs.write_text('somebody else', encoding='utf-8')
+        with self.assertRaises(merge.Refused):
+            merge.add(self.data, self.addon)
+        self.assertEqual(theirs.read_text(encoding='utf-8'), 'somebody else')
+
+    def test_a_refused_add_writes_nothing(self):
+        """A search index the add-on's pages do not fit: refused before any file is copied."""
+        db = self.data / 'library-data' / 'search.sqlite'
+        db.unlink()
+        con = sqlite3.connect(db)
+        con.execute('CREATE VIRTUAL TABLE pages USING fts5(doc_id UNINDEXED, body)')
+        con.commit()
+        con.close()
+        before = sorted(p.relative_to(self.data).as_posix() for p in self.data.rglob('*') if p.is_file())
+        with self.assertRaises(merge.Refused):
+            merge.add(self.data, self.addon)
+        after = sorted(p.relative_to(self.data).as_posix() for p in self.data.rglob('*') if p.is_file())
+        self.assertEqual(after, before)
+
+    def test_remove_keeps_a_file_another_record_names(self):
+        merge.add(self.data, self.addon)
+        theirs = self.addon_records()[0]
+        cat = self.cat()
+        cat.append({**cat[0], 'id': 'doc-b', 'path': theirs['path'], 'text_path': theirs['text_path']})
+        (self.data / 'library-data' / 'catalog.json').write_text(json.dumps(cat, indent=2), encoding='utf-8')
+        merge.remove(self.data, json.loads((self.addon / 'pack.json').read_text())['name'])
+        self.assertTrue((self.data / 'library-data' / theirs['path']).is_file())
+        self.assertTrue((self.data / 'library-data' / theirs['text_path']).is_file())
+
     def test_not_a_library_is_refused(self):
         with self.assertRaises(merge.Refused):
             merge.add(Path(self.tmp.name) / 'empty', self.addon)
